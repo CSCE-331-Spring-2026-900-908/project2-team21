@@ -55,8 +55,8 @@ BEGIN
       )
       RETURNING order_id INTO new_order_id;
 
-      -- 1 to 4 line items per order
-      line_count := 1 + floor(random()*4)::int;
+      -- 1 to 2 line items per order
+      line_count := 1 + floor(random()*2)::int;
 
       FOR j IN 1..line_count LOOP
         -- Pick a random DRINK (not an add-on)
@@ -71,7 +71,7 @@ BEGIN
         VALUES (
           new_order_id,
           drink_id,
-          1 + floor(random()*3)::int  -- quantity 1..3
+          1 + floor(random()*2)::int  -- quantity 1..2
         )
         RETURNING line_item_id INTO new_line_id;
 
