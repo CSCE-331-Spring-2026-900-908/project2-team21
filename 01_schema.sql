@@ -1,11 +1,12 @@
 -- 01_schema.sql
 -- Drop in dependency order
+DROP TABLE IF EXISTS Line_Item_Add_Ons CASCADE;   
 DROP TABLE IF EXISTS Order_Line_Items CASCADE;
 DROP TABLE IF EXISTS Orders CASCADE;
+DROP TABLE IF EXISTS Recipes CASCADE;            
 DROP TABLE IF EXISTS Menu_Items CASCADE;
 DROP TABLE IF EXISTS Inventory CASCADE;
 DROP TABLE IF EXISTS Employees CASCADE;
-
 CREATE TABLE Employees (
   employee_id SERIAL PRIMARY KEY,
   first_name  VARCHAR(50) NOT NULL,
@@ -23,7 +24,17 @@ CREATE TABLE Inventory (
 CREATE TABLE Menu_Items (
   menu_item_id SERIAL PRIMARY KEY,
   item_name    VARCHAR(100) NOT NULL UNIQUE,
-  base_price   NUMERIC(6,2) NOT NULL CHECK (base_price >= 0)
+  base_price   NUMERIC(6,2) NOT NULL CHECK (base_price >= 0),
+  item_type    VARCHAR(20) NOT NULL DEFAULT 'Drink'
+    CHECK (item_type IN ('Drink','Addon'))
+);
+
+
+CREATE TABLE Recipes (
+  menu_item_id    INTEGER NOT NULL REFERENCES Menu_Items(menu_item_id) ON DELETE CASCADE,
+  inventory_id    INTEGER NOT NULL REFERENCES Inventory(inventory_id),
+  quantity_used   NUMERIC(10,2) NOT NULL CHECK (quantity_used > 0),
+  PRIMARY KEY (menu_item_id, inventory_id)
 );
 
 CREATE TABLE Orders (
@@ -40,8 +51,18 @@ CREATE TABLE Order_Line_Items (
   quantity     INTEGER NOT NULL CHECK (quantity > 0)
 );
 
+CREATE TABLE Line_Item_Add_Ons (
+  line_item_id INTEGER NOT NULL REFERENCES Order_Line_Items(line_item_id) ON DELETE CASCADE,
+  add_on_menu_item_id INTEGER NOT NULL REFERENCES Menu_Items(menu_item_id),
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  PRIMARY KEY (line_item_id, add_on_menu_item_id)
+);
+
 -- Helpful indexes for reporting
 CREATE INDEX idx_orders_timestamp ON Orders(order_timestamp);
 CREATE INDEX idx_orders_employee  ON Orders(employee_id);
 CREATE INDEX idx_oli_order        ON Order_Line_Items(order_id);
 CREATE INDEX idx_oli_menu_item    ON Order_Line_Items(menu_item_id);
+CREATE INDEX idx_recipes_menu_item ON Recipes(menu_item_id);
+CREATE INDEX idx_lia_line_item ON Line_Item_Add_Ons(line_item_id);
+CREATE INDEX idx_lia_addon     ON Line_Item_Add_Ons(add_on_menu_item_id);
