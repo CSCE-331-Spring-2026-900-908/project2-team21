@@ -1,0 +1,3 @@
+SELECT SUM(total_amount) FROM Orders; --Shows sales are >1M 
+SELECT MAX(order_timestamp) - MIN(order_timestamp) AS interval_difference FROM Orders;  --Shows that we have 52 weeks of orders
+SELECT DATE(order_timestamp), SUM(total_amount) FROM Orders GROUP BY DATE(order_timestamp) ORDER BY SUM(total_amount) DESC LIMIT 4;  --Shows that we have precisely 3 peak days with the next being a good amount in profit away
