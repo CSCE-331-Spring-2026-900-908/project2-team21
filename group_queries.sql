@@ -3,3 +3,4 @@ SELECT MAX(order_timestamp) - MIN(order_timestamp) AS interval_difference FROM O
 SELECT DATE(order_timestamp), SUM(total_amount) FROM Orders GROUP BY DATE(order_timestamp) ORDER BY SUM(total_amount) DESC LIMIT 4;  --Shows that we have precisely 3 peak days with the next being a good amount in profit away
 SELECT COUNT(*) AS count_menu_items FROM menu_items; --Enumerates all menu items
 SELECT COUNT(*) AS count_menu_items FROM menu_items WHERE item_type = 'Drink'; --Enumerates all menu items EXLCUDING ADDONS
+SELECT COUNT(*) AS count_employees FROM employees; -- Enumerates count of employees
