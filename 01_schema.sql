@@ -48,7 +48,8 @@ CREATE TABLE Order_Line_Items (
   line_item_id SERIAL PRIMARY KEY,
   order_id     INTEGER NOT NULL REFERENCES Orders(order_id) ON DELETE CASCADE,
   menu_item_id INTEGER NOT NULL REFERENCES Menu_Items(menu_item_id),
-  quantity     INTEGER NOT NULL CHECK (quantity > 0)
+  quantity     INTEGER NOT NULL CHECK (quantity > 0),
+  sale_price   NUMERIC(6,2) NOT NULL
 );
 
 CREATE TABLE Line_Item_Add_Ons (
