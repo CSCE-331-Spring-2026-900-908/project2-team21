@@ -5,4 +5,4 @@ SELECT COUNT(*) AS count_menu_items FROM menu_items; --Enumerates all menu items
 SELECT COUNT(*) AS count_menu_items FROM menu_items WHERE item_type = 'Drink'; --Enumerates all menu items EXLCUDING ADDONS
 SELECT COUNT(*) AS count_employees FROM employees; --Enumerates count of employees
 SELECT * FROM inventory WHERE quantity_in_stock < reorder_level; --Shows all items in inventory that need to be reordered
-SELECT COUNT(CASE WHEN total_amount < 10 THEN 1 END) AS "<$10", COUNT(CASE WHEN total_amount BETWEEN 10 AND 20 THEN 1 END) AS "$10-$20", COUNT(CASE WHEN total_amount > 20 THEN 1 END) AS "$20+" FROM orders; --Shows the orders in different categories of sales amount
+SELECT COUNT(CASE WHEN total_amount < 10 THEN 1 END) AS "<$10", COUNT(CASE WHEN total_amount BETWEEN 10 AND 20 THEN 1 END) AS "$10-$20", COUNT(CASE WHEN total_amount > 20 THEN 1 END) AS "$20+" FROM orders; --Shows the count of orders in different categories of sales amount
