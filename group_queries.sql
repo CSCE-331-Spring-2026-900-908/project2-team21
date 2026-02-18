@@ -16,3 +16,4 @@ SELECT TO_CHAR(order_timestamp, 'Day') AS day_of_week, SUM(total_amount) AS tota
 SELECT order_id, employee_id, order_timestamp, total_amount FROM orders ORDER BY total_amount DESC LIMIT 1; --Finds the single largest transaction by revenue to identify your biggest sales
 SELECT ROUND(AVG(item_count), 2) AS avg_drinks_per_order FROM (SELECT order_id, SUM(quantity) AS item_count FROM order_line_items GROUP BY order_id) AS order_totals; --Calculates the average number of drinks purchased per order
 SELECT (SELECT SUM(quantity) FROM line_item_add_ons) AS total_addons_sold, (SELECT SUM(quantity) FROM order_line_items) AS total_drinks_sold; --Compares total add-ons sold against total drinks sold
+SELECT e.first_name, e.last_name, COUNT(o.order_id) AS total_orders_handled FROM employees e JOIN orders o ON e.employee_id = o.employee_id GROUP BY e.first_name, e.last_name ORDER BY total_orders_handled DESC; --Ranks employees by total number of orders
