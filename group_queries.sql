@@ -9,3 +9,4 @@ SELECT COUNT(CASE WHEN total_amount < 10 THEN 1 END) AS "<$10", COUNT(CASE WHEN 
 SELECT m.item_name, SUM(oli.quantity) AS total_sold FROM order_line_items oli JOIN menu_items m ON m.menu_item_id = oli.menu_item_id WHERE m.item_type = 'Drink' GROUP BY m.item_name ORDER BY total_sold DESC LIMIT 10; --Top 10 best-selling drinks by quantity
 SELECT ma.item_name AS addon_name, SUM(lia.quantity) AS addon_units FROM line_item_add_ons lia JOIN menu_items ma ON ma.menu_item_id = lia.add_on_menu_item_id GROUP BY ma.item_name ORDER BY addon_units DESC LIMIT 10; --Top 10 most-used add-ons
 SELECT EXTRACT(HOUR FROM order_timestamp) AS hour_of_day, COUNT(*) AS order_count FROM orders GROUP BY hour_of_day ORDER BY order_count DESC LIMIT 1; --Busiest hour by number of orders
+SELECT ROUND(AVG(total_amount), 2) AS avg_order_total FROM orders; --Average order total (sanity check)
