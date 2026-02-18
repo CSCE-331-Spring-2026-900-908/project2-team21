@@ -12,3 +12,5 @@ SELECT EXTRACT(HOUR FROM order_timestamp) AS hour_of_day, COUNT(*) AS order_coun
 SELECT ROUND(AVG(total_amount), 2) AS avg_order_total FROM orders; --Average order total (sanity check)
 SELECT DATE_TRUNC('week', order_timestamp) AS week_start, SUM(total_amount) AS weekly_sales FROM orders GROUP BY week_start ORDER BY weekly_sales DESC LIMIT 5; --Top 5 highest-sales weeks
 SELECT m.item_name AS menu_item, COUNT(*) AS times_sold, ROUND(SUM(oli.sale_price * oli.quantity), 2) AS revenue FROM order_line_items oli JOIN menu_items m ON m.menu_item_id = oli.menu_item_id GROUP BY m.item_name ORDER BY revenue DESC LIMIT 10; --Top 10 menu items by revenue
+SELECT TO_CHAR(order_timestamp, 'Day') AS day_of_week, SUM(total_amount) AS total_revenue FROM orders GROUP BY day_of_week, EXTRACT(DOW FROM order_timestamp) ORDER BY EXTRACT(DOW FROM order_timestamp); --Total revenue grouped by day of the week
+SELECT order_id, employee_id, order_timestamp, total_amount FROM orders ORDER BY total_amount DESC LIMIT 1; --Finds the single largest transaction by revenue to identify your biggest sales
