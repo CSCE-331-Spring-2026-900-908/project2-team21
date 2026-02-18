@@ -10,3 +10,5 @@ SELECT m.item_name, SUM(oli.quantity) AS total_sold FROM order_line_items oli JO
 SELECT ma.item_name AS addon_name, SUM(lia.quantity) AS addon_units FROM line_item_add_ons lia JOIN menu_items ma ON ma.menu_item_id = lia.add_on_menu_item_id GROUP BY ma.item_name ORDER BY addon_units DESC LIMIT 10; --Top 10 most-used add-ons
 SELECT EXTRACT(HOUR FROM order_timestamp) AS hour_of_day, COUNT(*) AS order_count FROM orders GROUP BY hour_of_day ORDER BY order_count DESC LIMIT 1; --Busiest hour by number of orders
 SELECT ROUND(AVG(total_amount), 2) AS avg_order_total FROM orders; --Average order total (sanity check)
+SELECT DATE_TRUNC('week', order_timestamp) AS week_start, SUM(total_amount) AS weekly_sales FROM orders GROUP BY week_start ORDER BY weekly_sales DESC LIMIT 5; --Top 5 highest-sales weeks
+SELECT m.item_name AS menu_item, COUNT(*) AS times_sold, ROUND(SUM(oli.sale_price * oli.quantity), 2) AS revenue FROM order_line_items oli JOIN menu_items m ON m.menu_item_id = oli.menu_item_id GROUP BY m.item_name ORDER BY revenue DESC LIMIT 10; --Top 10 menu items by revenue
