@@ -1,0 +1,4 @@
+update dbSetup.java with the username and password of your 331 aws account
+database-view.fxml - output of Java Scene Builder, simple layout of a query button, result text area, and close button; controller set to DatabaseController
+DatabaseApp.java - launches the application and opens a window formatted with database-view.fxml
+DatabaseController.java - simple controller that manages both buttons; when query button clicked will open db connection, run a simple query, and display the result to the window text area; when close button clicked will close the window and application will exit
