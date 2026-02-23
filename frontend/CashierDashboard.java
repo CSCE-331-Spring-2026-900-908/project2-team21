@@ -70,22 +70,182 @@ public class CashierDashboard extends JFrame {
         checkoutPanel.add(totalLabel);
 
         JButton removeButton = new JButton("Remove Selected Item");
-        removeButton.setBackground(new Color(220, 53, 69)); // A nice red
+        removeButton.setBackground(new Color(220, 53, 69));
         removeButton.setForeground(Color.WHITE);
         removeButton.setFont(new Font("Arial", Font.BOLD, 14));
-        //removeButton.addActionListener(e -> //removeSelectedItem());
+        removeButton.addActionListener(e -> removeSelectedItem());
         checkoutPanel.add(removeButton);
 
         JButton checkoutButton = new JButton("Checkout");
         checkoutButton.setBackground(new Color(60, 179, 113)); 
         checkoutButton.setForeground(Color.WHITE);
         checkoutButton.setFont(new Font("Arial", Font.BOLD, 18));
-        //checkoutButton.addActionListener(e -> //processCheckout());
+        checkoutButton.addActionListener(e -> processCheckout());
         checkoutPanel.add(checkoutButton);
 
         cartPanel.add(checkoutPanel, BorderLayout.SOUTH);
         add(cartPanel, BorderLayout.EAST);
 
-        //loadDrinks();
+        loadDrinks();
+    }
+
+    private void loadDrinks() {
+        String sql = "SELECT item_name, base_price FROM Menu_Items WHERE item_type = 'Drink'";
+        
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                String itemName = rs.getString("item_name");
+                double price = rs.getDouble("base_price");
+
+                JButton drinkButton = new JButton("<html><center>" + itemName + "<br>$" + String.format("%.2f", price) + "</center></html>");
+                drinkButton.setPreferredSize(new Dimension(150, 100));
+                drinkButton.setBackground(new Color(173, 216, 230)); 
+                drinkButton.setFocusPainted(false);
+                
+                drinkButton.addActionListener(e -> {
+                    DrinkCustomization customizationPage = new DrinkCustomization(CashierDashboard.this, itemName, price);
+                    customizationPage.setVisible(true);
+                });
+
+                menuPanel.add(drinkButton);
+            }
+            
+            menuPanel.revalidate();
+            menuPanel.repaint();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to load menu items: " + e.getMessage());
+        }
+    }
+
+    public void addCustomizedItemToCart(String drinkName, ArrayList<String> addons, double totalItemPrice) {
+        currentOrderItems.add(new OrderItem(drinkName, addons, totalItemPrice));
+        refreshCartUI();
+    }
+
+    private void removeSelectedItem() {
+        int selectedIndex = cartList.getSelectedIndex();
+        
+        if (selectedIndex != -1) {
+            int orderItemIndex = cartToOrderMap.get(selectedIndex);
+            currentOrderItems.remove(orderItemIndex);
+
+            refreshCartUI();
+        } else {
+            JOptionPane.showMessageDialog(this, "Please select an item in the cart to remove.");
+        }
+    }
+
+    private void refreshCartUI() {
+        cartModel.clear();
+        cartToOrderMap.clear();
+        currentTotal = 0.0;
+
+        for (int i = 0; i < currentOrderItems.size(); i++) {
+            OrderItem item = currentOrderItems.get(i);
+            
+            cartModel.addElement(item.drinkName + " - $" + String.format("%.2f", item.totalItemPrice));
+            cartToOrderMap.add(i);
+            
+            for (String addon : item.addons) {
+                cartModel.addElement("   + " + addon);
+                cartToOrderMap.add(i);
+            }
+            
+            currentTotal += item.totalItemPrice;
+        }
+
+        totalLabel.setText("Total: $" + String.format("%.2f", currentTotal));
+    }
+
+    private void processCheckout() {
+        if (currentOrderItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "The cart is empty!");
+            return;
+        }
+
+        String insertOrderSql = "INSERT INTO Orders (employee_id, order_timestamp, total_amount) VALUES (?, ?, ?)";
+        String getMenuIdSql = "SELECT menu_item_id FROM Menu_Items WHERE item_name = ?";
+        String insertLineItemSql = "INSERT INTO Order_Line_Items (order_id, menu_item_id, quantity, sale_price) VALUES (?, ?, ?, ?)";
+        String insertAddonSql = "INSERT INTO Line_Item_Add_Ons (line_item_id, add_on_menu_item_id, quantity) VALUES (?, ?, ?)";
+
+        try (Connection conn = Database.getConnection()) {
+            if (conn == null) return;
+
+            conn.setAutoCommit(false); 
+
+            try (PreparedStatement pstmtOrder = conn.prepareStatement(insertOrderSql, Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement pstmtGetMenuId = conn.prepareStatement(getMenuIdSql);
+                 PreparedStatement pstmtLineItem = conn.prepareStatement(insertLineItemSql, Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement pstmtAddon = conn.prepareStatement(insertAddonSql)) {
+
+                pstmtOrder.setInt(1, currentEmployeeId);
+                pstmtOrder.setTimestamp(2, new java.sql.Timestamp(System.currentTimeMillis()));
+                pstmtOrder.setDouble(3, currentTotal);
+                pstmtOrder.executeUpdate();
+
+                int generatedOrderId = -1;
+                try (ResultSet rsOrder = pstmtOrder.getGeneratedKeys()) {
+                    if (rsOrder.next()) {
+                        generatedOrderId = rsOrder.getInt(1);
+                    } else {
+                        throw new SQLException("Failed to retrieve generated order_id.");
+                    }
+                }
+
+                for (OrderItem item : currentOrderItems) {
+                    pstmtGetMenuId.setString(1, item.drinkName);
+                    int drinkMenuId = -1;
+                    try (ResultSet rsDrinkId = pstmtGetMenuId.executeQuery()) {
+                        if (rsDrinkId.next()) drinkMenuId = rsDrinkId.getInt("menu_item_id");
+                    }
+
+                    pstmtLineItem.setInt(1, generatedOrderId);
+                    pstmtLineItem.setInt(2, drinkMenuId);
+                    pstmtLineItem.setInt(3, 1); 
+                    pstmtLineItem.setDouble(4, item.totalItemPrice);
+                    pstmtLineItem.executeUpdate();
+
+                    int generatedLineItemId = -1;
+                    try (ResultSet rsLineItem = pstmtLineItem.getGeneratedKeys()) {
+                        if (rsLineItem.next()) generatedLineItemId = rsLineItem.getInt(1);
+                    }
+
+                    for (String addonName : item.addons) {
+                        pstmtGetMenuId.setString(1, addonName);
+                        int addonMenuId = -1;
+                        try (ResultSet rsAddonId = pstmtGetMenuId.executeQuery()) {
+                            if (rsAddonId.next()) addonMenuId = rsAddonId.getInt("menu_item_id");
+                        }
+
+                        pstmtAddon.setInt(1, generatedLineItemId);
+                        pstmtAddon.setInt(2, addonMenuId);
+                        pstmtAddon.setInt(3, 1);  
+                        pstmtAddon.executeUpdate();
+                    }
+                }
+
+                conn.commit();
+                JOptionPane.showMessageDialog(this, "Order placed successfully! Order ID: " + generatedOrderId);
+
+                currentOrderItems.clear();
+                refreshCartUI();
+
+            } catch (SQLException ex) {
+                conn.rollback();
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Transaction failed and rolled back. Check console.");
+            } finally {
+                conn.setAutoCommit(true); 
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Database connection error during checkout.");
+        }
     }
 }
