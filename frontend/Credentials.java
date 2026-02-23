@@ -1,8 +1,8 @@
 package frontend;
 
 public class Credentials {
-    public static final String username = "team_21";
-    public static final String password = "21";
+    public static final String username = "USERNAME";
+    public static final String password = "PASSWORD";
 }
 
 // HOW TO WORK:
