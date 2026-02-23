@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
 import javax.swing.*;
 
 public class LoginScreen extends JFrame {
@@ -79,7 +78,7 @@ public class LoginScreen extends JFrame {
                                 JOptionPane.showMessageDialog(this, "Manager Dashboard coming soon!");
                                 // new ManagerDashboard(empId, firstName).setVisible(true);
                             } else {
-                                // Pass BOTH the ID and Name to the Cashier Dashboard
+                                // pass ID and name to the new cashier dash
                                 new CashierDashboard(empId, firstName).setVisible(true);
                             }
                         } else {
