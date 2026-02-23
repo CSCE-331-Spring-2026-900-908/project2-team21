@@ -7,54 +7,48 @@ import javafx.stage.Stage;
 public class DatabaseController {
     
     @FXML
-    private Button queryButton; //match the fx:id value from Scene Builder
+    private Button queryButton; 
     
     @FXML
-    private TextArea resultArea; //match the fx:id value from Scene Builder
+    private TextArea resultArea; 
     
     @FXML
-    private Button closeButton; //match the fx:id value from Scene Builder
+    private Button closeButton; 
     
+    // UPDATED: Pointing to Team 21's Database
+    private static final String DB_URL = "jdbc:postgresql://csce-315-db.engr.tamu.edu:5432/team_21_db"; 
     
-    private static final String DB_URL = "jdbc:postgresql://csce-315-db.engr.tamu.edu/shoestore_sthomas"; //database location
-    
-    // This method runs automatically when the FXML loads
     @FXML
     public void initialize() {
-        // Set up what happens when button is clicked
         queryButton.setOnAction(event -> runQuery());
         closeButton.setOnAction(event -> closeWindow());
     }
     
-    // Your method to run the database query
     private void runQuery() {
         resultArea.setText("Query will run here...");
 
         try {
-            // Get database creditials
             dbSetup my = new dbSetup();
  
-            // Build the connection
             Class.forName("org.postgresql.Driver");
             Connection conn = DriverManager.getConnection(DB_URL, my.user, my.pswd);
 
-            // Create statement
             Statement stmt = conn.createStatement();
 
-            // Run sql query
-            String sqlStatement = "SELECT cus_lname FROM customer";
+            // UPDATED: Querying your Employees table
+            String sqlStatement = "SELECT first_name, last_name, role FROM Employees LIMIT 10;";
             ResultSet rs = stmt.executeQuery(sqlStatement);
 
-            // Output result
-            String result = "";
+            String result = "--- Employee Roster ---\n";
             while (rs.next()) {
-                result += rs.getString("cus_lname") + "\n";
+                // UPDATED: Fetching the columns we actually created in Phase 2
+                result += rs.getString("first_name") + " " + 
+                          rs.getString("last_name") + " (" + 
+                          rs.getString("role") + ")\n";
             }
 
-            // Display result
             resultArea.setText(result);
 
-            // Close connection
             rs.close();
             stmt.close();
             conn.close();
@@ -62,7 +56,6 @@ public class DatabaseController {
         } catch (Exception e) {
             resultArea.setText("Error connecting to database:\n" + e.getMessage());
             e.printStackTrace();
-            System.exit(0);
         }
     }
 
