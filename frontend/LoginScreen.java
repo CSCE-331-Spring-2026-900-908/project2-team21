@@ -23,5 +23,22 @@ public class LoginScreen extends JFrame {
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         add(titleLabel, gbc);
+
+        JLabel empIdLabel = new JLabel("Employee ID:");
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        add(empIdLabel, gbc);
+
+        empIdField = new JTextField(15);
+        gbc.gridx = 1;
+        add(empIdField, gbc);
+
+        loginButton = new JButton("Login");
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        add(loginButton, gbc);
+
+        
     }
 }
