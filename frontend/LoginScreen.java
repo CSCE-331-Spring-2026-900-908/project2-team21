@@ -2,7 +2,10 @@ package frontend;
 
 import java.awt.*;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+
 import javax.swing.*;
 
 public class LoginScreen extends JFrame {
@@ -61,7 +64,29 @@ public class LoginScreen extends JFrame {
                     return;
                 }
 
-
+                String sql = "SELECT first_name, role FROM Employees WHERE employee_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, empId);
+                    
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            String firstName = rs.getString("first_name");
+                            String role = rs.getString("role");
+                            
+                            this.dispose();
+                            
+                            if (role.equals("Manager")) {
+                                JOptionPane.showMessageDialog(this, "Manager Dashboard coming soon!");
+                                // new ManagerDashboard(empId, firstName).setVisible(true);
+                            } else {
+                                // Pass BOTH the ID and Name to the Cashier Dashboard
+                                new CashierDashboard(empId, firstName).setVisible(true);
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Invalid Employee ID. Please try again.");
+                        }
+                    }
+                }
             }
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Employee ID must be a number.");
