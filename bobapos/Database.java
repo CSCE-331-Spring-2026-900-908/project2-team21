@@ -1,4 +1,4 @@
-package com.bobapos;
+package bobapos;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
