@@ -77,8 +77,7 @@ public class LoginScreen extends JFrame {
                             this.dispose();
 
                             if (role.equals("Manager")) {
-                                JOptionPane.showMessageDialog(this, "Manager Dashboard coming soon!");
-                                // new ManagerDashboard(empId, firstName).setVisible(true);
+                                new ManagerDashboard(empId, firstName).setVisible(true);
                             } else {
                                 // pass ID and name to the new cashier dash
                                 new CashierDashboard(empId, firstName).setVisible(true);
