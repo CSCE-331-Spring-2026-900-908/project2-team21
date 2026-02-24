@@ -42,6 +42,22 @@ public class CashierDashboard extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
 
+        // TOP PANEL (LOGOUT)
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        JButton logoutButton = new JButton("Logout");
+        logoutButton.setFont(new Font("Arial", Font.BOLD, 14));
+        logoutButton.setBackground(new Color(108, 117, 125));
+        logoutButton.setForeground(Color.WHITE);
+
+        logoutButton.setFocusPainted(false);
+        logoutButton.setBorderPainted(false);
+        logoutButton.setOpaque(true);
+        logoutButton.addActionListener(e -> handleLogout());
+
+        topPanel.add(logoutButton, BorderLayout.EAST);
+        add(topPanel, BorderLayout.NORTH);
+
         // LEFT PANEL (DRINK MENU)
         menuPanel = new JPanel();
         menuPanel.setLayout(new GridLayout(0, 4, 10, 10)); 
@@ -87,6 +103,13 @@ public class CashierDashboard extends JFrame {
         add(cartPanel, BorderLayout.EAST);
 
         loadDrinks();
+    }
+
+    // Handles logout and returns to login screen
+    private void handleLogout() {
+        dispose();
+        LoginScreen loginScreen = new LoginScreen();
+        loginScreen.setVisible(true);
     }
 
     private void loadDrinks() {
