@@ -26,6 +26,7 @@ public class CashierDashboard extends JFrame {
         ArrayList<String> addons;
         double totalItemPrice;
 
+        // Holds a single order item with its add-ons and price.
         OrderItem(String drinkName, ArrayList<String> addons, double totalItemPrice) {
             this.drinkName = drinkName;
             this.addons = addons;
@@ -33,6 +34,7 @@ public class CashierDashboard extends JFrame {
         }
     }
 
+    // Builds the cashier dashboard for a logged-in employee.
     public CashierDashboard(int employeeId, String employeeName) {
         this.currentEmployeeId = employeeId;
         
@@ -112,6 +114,7 @@ public class CashierDashboard extends JFrame {
         loginScreen.setVisible(true);
     }
 
+    // Loads drink menu items and renders them as buttons.
     private void loadDrinks() {
         String sql = "SELECT item_name, base_price FROM Menu_Items WHERE item_type = 'Drink'";
         
@@ -145,11 +148,13 @@ public class CashierDashboard extends JFrame {
         }
     }
 
+    // Adds a fully customized item to the current order.
     public void addCustomizedItemToCart(String drinkName, ArrayList<String> addons, double totalItemPrice) {
         currentOrderItems.add(new OrderItem(drinkName, addons, totalItemPrice));
         refreshCartUI();
     }
 
+    // Removes the selected item from the cart list.
     private void removeSelectedItem() {
         int selectedIndex = cartList.getSelectedIndex();
         
@@ -163,6 +168,7 @@ public class CashierDashboard extends JFrame {
         }
     }
 
+    // Rebuilds the cart list and total based on current items.
     private void refreshCartUI() {
         cartModel.clear();
         cartToOrderMap.clear();
@@ -185,6 +191,7 @@ public class CashierDashboard extends JFrame {
         totalLabel.setText("Total: $" + String.format("%.2f", currentTotal));
     }
 
+    // Persists the current order and its line items to the database.
     private void processCheckout() {
         if (currentOrderItems.isEmpty()) {
             JOptionPane.showMessageDialog(this, "The cart is empty!");
@@ -197,7 +204,9 @@ public class CashierDashboard extends JFrame {
         String insertAddonSql = "INSERT INTO Line_Item_Add_Ons (line_item_id, add_on_menu_item_id, quantity) VALUES (?, ?, ?)";
 
         try (Connection conn = Database.getConnection()) {
-            if (conn == null) return;
+            if (conn == null) {
+                return;
+            }
 
             conn.setAutoCommit(false); 
 
@@ -229,7 +238,7 @@ public class CashierDashboard extends JFrame {
 
                     pstmtLineItem.setInt(1, generatedOrderId);
                     pstmtLineItem.setInt(2, drinkMenuId);
-                    pstmtLineItem.setInt(3, 1); 
+                    pstmtLineItem.setInt(3, 1);
                     pstmtLineItem.setDouble(4, item.totalItemPrice);
                     pstmtLineItem.executeUpdate();
 
@@ -247,7 +256,7 @@ public class CashierDashboard extends JFrame {
 
                         pstmtAddon.setInt(1, generatedLineItemId);
                         pstmtAddon.setInt(2, addonMenuId);
-                        pstmtAddon.setInt(3, 1);  
+                        pstmtAddon.setInt(3, 1);
                         pstmtAddon.executeUpdate();
                     }
                 }
@@ -263,7 +272,7 @@ public class CashierDashboard extends JFrame {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Transaction failed and rolled back. Check console.");
             } finally {
-                conn.setAutoCommit(true); 
+                conn.setAutoCommit(true);
             }
 
         } catch (SQLException e) {

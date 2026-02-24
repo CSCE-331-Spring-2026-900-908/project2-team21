@@ -7,9 +7,10 @@ import java.sql.SQLException;
 public class Database {
     private static final String URL = "jdbc:postgresql://csce-315-db.engr.tamu.edu:5432/team_21_db";
 
+    // Opens a new database connection using the configured credentials.
     public static Connection getConnection() {
         try {
-            return DriverManager.getConnection(URL, Credentials.username, Credentials.password);        // GET USER AND PASSWORD FROM CREDENTIALS FILE
+            return DriverManager.getConnection(URL, Credentials.username, Credentials.password);
         } catch (SQLException e) {
             System.err.println("Database connection failed: " + e.getMessage());
             return null;

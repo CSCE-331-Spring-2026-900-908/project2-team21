@@ -11,11 +11,12 @@ public class LoginScreen extends JFrame {
     private JTextField empIdField;
     private JButton loginButton;
 
+    // Builds the login screen UI.
     public LoginScreen() {
         setTitle("Boba POS - Login");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); 
+        setLocationRelativeTo(null);
         setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -47,6 +48,7 @@ public class LoginScreen extends JFrame {
         empIdField.addActionListener(e -> attemptLogin());
     }
 
+    // Validates the employee ID and opens the correct dashboard.
     private void attemptLogin() {
         String empIdStr = empIdField.getText().trim();
         if (empIdStr.isEmpty()) {
@@ -71,9 +73,9 @@ public class LoginScreen extends JFrame {
                         if (rs.next()) {
                             String firstName = rs.getString("first_name");
                             String role = rs.getString("role");
-                            
+
                             this.dispose();
-                            
+
                             if (role.equals("Manager")) {
                                 JOptionPane.showMessageDialog(this, "Manager Dashboard coming soon!");
                                 // new ManagerDashboard(empId, firstName).setVisible(true);
@@ -90,7 +92,7 @@ public class LoginScreen extends JFrame {
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Employee ID must be a number.");
         } catch (SQLException ex) {
-            ex.printStackTrace(); 
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Database error. Check terminal output.");
         }
     }

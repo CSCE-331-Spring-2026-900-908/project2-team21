@@ -16,6 +16,7 @@ public class DrinkCustomization extends JDialog {
     private ArrayList<JCheckBox> addonCheckboxes = new ArrayList<>();
     private ArrayList<Double> addonPrices = new ArrayList<>();
 
+    // Builds the customization dialog for a selected drink.
     public DrinkCustomization(CashierDashboard parent, String drinkName, double basePrice) {
         super(parent, "Customize: " + drinkName, true);
         this.parentDashboard = parent;
@@ -51,6 +52,7 @@ public class DrinkCustomization extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
+    // Loads add-on items and displays them as checkboxes.
     private void loadAddons(JPanel panel) {
         String sql = "SELECT item_name, base_price FROM Menu_Items WHERE item_type = 'Addon'";
         
@@ -75,6 +77,7 @@ public class DrinkCustomization extends JDialog {
         }
     }
 
+    // Calculates the selected add-ons and reports them to the parent dashboard.
     private void processCustomizedDrink() {
         double totalItemPrice = basePrice;
         ArrayList<String> selectedAddons = new ArrayList<>();
