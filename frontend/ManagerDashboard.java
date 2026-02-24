@@ -126,4 +126,96 @@ public class ManagerDashboard extends JFrame {
         loadTopItems(startTimestamp);
         loadEmployeeSales(startTimestamp);
     }
+
+    // Date range -> start timestamp (or null for All Time)
+    private Timestamp getStartTimestampFromRange() {
+        String selected = (String) rangeDropdown.getSelectedItem();
+        if (selected == null) {
+            return Timestamp.valueOf(LocalDateTime.now().minusDays(7));
+        }
+
+        LocalDateTime start;
+        switch (selected) {
+            case "Last 7 Days":
+                start = LocalDateTime.now().minusDays(7);
+                return Timestamp.valueOf(start);
+            case "Last 30 Days":
+                start = LocalDateTime.now().minusDays(30);
+                return Timestamp.valueOf(start);
+            case "Last 365 Days":
+                start = LocalDateTime.now().minusDays(365);
+                return Timestamp.valueOf(start);
+            case "All Time":
+            default:
+                return null;
+        }
+    }
+
+    // Loads total sales into the summary label
+    private void loadTotalSales(Timestamp startTimestamp) {
+        String sql =
+                "SELECT COALESCE(SUM(total_amount), 0) AS total_sales " +
+                "FROM Orders " +
+                (startTimestamp != null ? "WHERE order_timestamp >= ? " : "");
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    double total = rs.getDouble("total_sales");
+                    totalSalesLabel.setText(String.format("Total: $%.2f", total));
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error loading total sales.");
+        }
+    }
+
+    // Loads sales grouped by day (date, orders, revenue)
+    private void loadSalesByDay(Timestamp startTimestamp) {
+        salesByDayModel.setRowCount(0);
+
+        String sql =
+                "SELECT DATE(order_timestamp) AS day, COUNT(*) AS orders, COALESCE(SUM(total_amount), 0) AS revenue " +
+                "FROM Orders " +
+                (startTimestamp != null ? "WHERE order_timestamp >= ? " : "") +
+                "GROUP BY day " +
+                "ORDER BY day DESC " +
+                "LIMIT 30";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    salesByDayModel.addRow(new Object[] {
+                            rs.getDate("day"),
+                            rs.getInt("orders"),
+                            String.format("$%.2f", rs.getDouble("revenue"))
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
 }
