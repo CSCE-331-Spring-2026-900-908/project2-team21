@@ -298,4 +298,23 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
         }
     }
+    
+    // Inventory System view
+    private void openInventorySystem() {
+        dispose();
+        new InventorySystem(managerId, managerName).setVisible(true);
+    }
+    
+    //Price Adjustment view
+    private void openPriceMenuAdjustments() {
+        dispose();
+        new PriceMenuAdjustments(managerId, managerName).setVisible(true);
+    }
+
+    // Handles logout and returns to login screen
+    private void handleLogout() {
+        dispose();
+        LoginScreen loginScreen = new LoginScreen();
+        loginScreen.setVisible(true);
+    }
 }
