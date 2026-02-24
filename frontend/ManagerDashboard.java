@@ -218,4 +218,84 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
         }
     }
+    
+    // Loads top selling drink items (qty + revenue)
+    private void loadTopItems(Timestamp startTimestamp) {
+        topItemsModel.setRowCount(0);
+
+        String sql =
+                "SELECT mi.item_name, SUM(oli.quantity) AS qty_sold, " +
+                "       COALESCE(SUM(oli.sale_price * oli.quantity), 0) AS revenue " +
+                "FROM Orders o " +
+                "JOIN Order_Line_Items oli ON oli.order_id = o.order_id " +
+                "JOIN Menu_Items mi ON mi.menu_item_id = oli.menu_item_id " +
+                "WHERE mi.item_type = 'Drink' " +
+                (startTimestamp != null ? "AND o.order_timestamp >= ? " : "") +
+                "GROUP BY mi.item_name " +
+                "ORDER BY revenue DESC " +
+                "LIMIT 10";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    topItemsModel.addRow(new Object[] {
+                            rs.getString("item_name"),
+                            rs.getInt("qty_sold"),
+                            String.format("$%.2f", rs.getDouble("revenue"))
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    // Loads employee sales (orders count + revenue)
+    private void loadEmployeeSales(Timestamp startTimestamp) {
+        employeeSalesModel.setRowCount(0);
+
+        String sql =
+                "SELECT (e.first_name || ' ' || e.last_name) AS employee_name, " +
+                "       COUNT(*) AS orders, COALESCE(SUM(o.total_amount), 0) AS revenue " +
+                "FROM Orders o " +
+                "JOIN Employees e ON e.employee_id = o.employee_id " +
+                (startTimestamp != null ? "WHERE o.order_timestamp >= ? " : "") +
+                "GROUP BY employee_name " +
+                "ORDER BY revenue DESC " +
+                "LIMIT 15";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    employeeSalesModel.addRow(new Object[] {
+                            rs.getString("employee_name"),
+                            rs.getInt("orders"),
+                            String.format("$%.2f", rs.getDouble("revenue"))
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
 }
