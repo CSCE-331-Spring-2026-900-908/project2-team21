@@ -43,13 +43,13 @@ public class ManagerDashboard extends JFrame {
         topBar.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
 
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        JButton inventoryButton = new JButton("Inventory System");
-        inventoryButton.addActionListener(e -> openInventorySystem());
-        leftPanel.add(inventoryButton);
+        // JButton inventoryButton = new JButton("Inventory System");
+        // inventoryButton.addActionListener(e -> openInventorySystem());
+        // leftPanel.add(inventoryButton);
 
-        JButton menuPriceButton = new JButton("Price/Menu Adjustments");
-        menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
-        leftPanel.add(menuPriceButton);
+        // JButton menuPriceButton = new JButton("Price/Menu Adjustments");
+        // menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
+        // leftPanel.add(menuPriceButton);
 
         rangeDropdown = new JComboBox<>(new String[] { "Last 7 Days", "Last 30 Days", "Last 365 Days", "All Time" });
         JButton refreshButton = new JButton("Refresh");
@@ -299,17 +299,17 @@ public class ManagerDashboard extends JFrame {
         }
     }
     
-    // Inventory System view
-    private void openInventorySystem() {
-        dispose();
-        new InventorySystem(managerId, managerName).setVisible(true);
-    }
-    
-    //Price Adjustment view
-    private void openPriceMenuAdjustments() {
-        dispose();
-        new PriceMenuAdjustments(managerId, managerName).setVisible(true);
-    }
+    // // Inventory System view
+    // private void openInventorySystem() {
+    //     dispose();
+    //     new InventorySystem(managerId, managerName).setVisible(true);
+    // }
+
+    // // Price Adjustment view
+    // private void openPriceMenuAdjustments() {
+    //     dispose();
+    //     new PriceMenuAdjustments(managerId, managerName).setVisible(true);
+    // }
 
     // Handles logout and returns to login screen
     private void handleLogout() {
