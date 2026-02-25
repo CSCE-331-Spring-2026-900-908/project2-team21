@@ -47,9 +47,9 @@ public class ManagerDashboard extends JFrame {
         // inventoryButton.addActionListener(e -> openInventorySystem());
         // leftPanel.add(inventoryButton);
 
-        // JButton menuPriceButton = new JButton("Price/Menu Adjustments");
-        // menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
-        // leftPanel.add(menuPriceButton);
+        JButton menuPriceButton = new JButton("Price/Menu Adjustments");
+        menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
+        leftPanel.add(menuPriceButton);
 
         rangeDropdown = new JComboBox<>(new String[] { "Last 7 Days", "Last 30 Days", "Last 365 Days", "All Time" });
         JButton refreshButton = new JButton("Refresh");
@@ -306,10 +306,10 @@ public class ManagerDashboard extends JFrame {
     // }
 
     // // Price Adjustment view
-    // private void openPriceMenuAdjustments() {
-    //     dispose();
-    //     new PriceMenuAdjustments(managerId, managerName).setVisible(true);
-    // }
+    private void openPriceMenuAdjustments() {
+        dispose();
+        new PriceMenuAdjustments(managerId, managerName).setVisible(true);
+    }
 
     // Handles logout and returns to login screen
     private void handleLogout() {
