@@ -52,16 +52,16 @@ public class PriceMenuAdjustments extends JFrame {
         loadMenuSummary();
     }
 
-    // Top bar matches wireframe: Manage Employees (left), Logout (right), plus Back to Analytics
+    // Top bar matches wireframe: Inventory System (left), Logout (right), plus Back to Analytics
     private JPanel buildTopBar() {
         JPanel topBar = new JPanel(new BorderLayout(10, 10));
         topBar.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
 
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 
-        JButton manageEmployeesButton = new JButton("Manage Employees");
-        manageEmployeesButton.addActionListener(e -> openManageEmployees());
-        leftPanel.add(manageEmployeesButton);
+        JButton inventoryButton = new JButton("Inventory System");
+        inventoryButton.addActionListener(e -> openInventorySystem());
+        leftPanel.add(inventoryButton);
 
         JButton backButton = new JButton("Back to Analytics");
         backButton.addActionListener(e -> openManagerDashboard());
@@ -412,9 +412,10 @@ public class PriceMenuAdjustments extends JFrame {
         new ManagerDashboard(managerId, managerName).setVisible(true);
     }
 
-    // Opens the manage employees screen placeholder.
-    private void openManageEmployees() {
-        JOptionPane.showMessageDialog(this, "Manage Employees coming soon!");
+    // Inventory System view
+    private void openInventorySystem() {
+        dispose();
+        new InventorySystem(managerId, managerName).setVisible(true);
     }
 
     // Logout back to login page
