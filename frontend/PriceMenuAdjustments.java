@@ -217,5 +217,120 @@ public class PriceMenuAdjustments extends JFrame {
 
         return right;
     }
+    
+    // Creates a summary row with a label and value.
+    private JPanel makeSummaryRow(String label, JLabel valueLabel) {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.add(new JLabel(label), BorderLayout.WEST);
+        row.add(valueLabel, BorderLayout.EAST);
+        return row;
+    }
+
+    // Loads menu items from DB, optionally filtered by type
+    private void loadMenuItems() {
+        menuModel.setRowCount(0);
+
+        String selectedType = (String) filterDropdown.getSelectedItem();
+        boolean filtered = selectedType != null && !selectedType.equals("All");
+
+        String sql =
+                "SELECT menu_item_id, item_name, item_type, base_price " +
+                "FROM Menu_Items " +
+                (filtered ? "WHERE item_type = ? " : "") +
+                "ORDER BY item_type ASC, item_name ASC";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            if (filtered) {
+                pstmt.setString(1, selectedType);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    menuModel.addRow(new Object[] {
+                            rs.getInt("menu_item_id"),
+                            rs.getString("item_name"),
+                            rs.getString("item_type"),
+                            rs.getBigDecimal("base_price")
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error loading menu items.");
+        }
+    }
+
+    // Fill editor fields when selecting a table row
+    private void populateFieldsFromSelection() {
+        int row = menuTable.getSelectedRow();
+        if (row < 0) {
+            return;
+        }
+
+        itemNameField.setText(menuModel.getValueAt(row, 1).toString());
+        itemTypeDropdown.setSelectedItem(menuModel.getValueAt(row, 2).toString());
+        basePriceField.setText(menuModel.getValueAt(row, 3).toString());
+    }
+
+    // Add menu item
+    private void addMenuItem() {
+        String itemName = itemNameField.getText().trim();
+        String itemType = (String) itemTypeDropdown.getSelectedItem();
+        String priceStr = basePriceField.getText().trim();
+
+        if (itemName.isEmpty() || itemType == null || priceStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill Item Name, Type, and Base Price.");
+            return;
+        }
+
+        BigDecimal basePrice;
+        try {
+            basePrice = new BigDecimal(priceStr);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Base Price must be numeric.");
+            return;
+        }
+
+        if (basePrice.compareTo(BigDecimal.ZERO) < 0) {
+            JOptionPane.showMessageDialog(this, "Base Price must be >= 0.");
+            return;
+        }
+
+        String sql =
+                "INSERT INTO Menu_Items(item_name, item_type, base_price) " +
+                "VALUES (?, ?, ?)";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            pstmt.setString(1, itemName);
+            pstmt.setString(2, itemType);
+            pstmt.setBigDecimal(3, basePrice);
+
+            pstmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Menu item added!");
+            clearFields();
+            loadMenuItems();
+            loadOrderHistoryAnalysis();
+            loadFeaturedItems();
+            loadMenuSummary();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error adding item (name may need to be unique).");
+        }
+    }
 
 }   
