@@ -439,8 +439,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "ORDER BY revenue DESC " +
                 "LIMIT 15";
 
-           try (Connection conn = Database.getConnection();
-               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+                try (Connection conn = Database.getConnection();
+                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 return;
@@ -474,8 +474,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "ORDER BY revenue DESC " +
                 "LIMIT 8";
 
-           try (Connection conn = Database.getConnection();
-               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+                try (Connection conn = Database.getConnection();
+                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 featuredModel.addElement("No data (DB not connected)");
@@ -509,8 +509,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "       MAX(menu_item_id) AS last_id " +
                 "FROM Menu_Items";
 
-           try (Connection conn = Database.getConnection();
-               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+                try (Connection conn = Database.getConnection();
+                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 return;
