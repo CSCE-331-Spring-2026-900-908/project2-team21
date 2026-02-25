@@ -103,5 +103,119 @@ public class PriceMenuAdjustments extends JFrame {
 
         return main;
     }
+    
+    // Left area: chart placeholder + "Suggested Adjustments" (table + editor)
+    private JPanel buildLeftArea() {
+        JPanel left = new JPanel(new BorderLayout(10, 10));
+
+        JPanel orderHistoryPanel = new JPanel(new BorderLayout(10, 10));
+        orderHistoryPanel.setBorder(BorderFactory.createTitledBorder("Order History Analysis"));
+
+        orderHistoryModel = new DefaultTableModel(new Object[] { "Item", "Units Sold", "Revenue" }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        orderHistoryTable = new JTable(orderHistoryModel);
+        orderHistoryPanel.add(new JScrollPane(orderHistoryTable), BorderLayout.CENTER);
+        orderHistoryPanel.setPreferredSize(new Dimension(0, 230));
+
+        left.add(orderHistoryPanel, BorderLayout.NORTH);
+
+        // Table
+        menuModel = new DefaultTableModel(new Object[] { "ID", "Item Name", "Type", "Base Price" }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        menuTable = new JTable(menuModel);
+        menuTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        menuTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                populateFieldsFromSelection();
+            }
+        });
+
+        JPanel tablePanel = new JPanel(new BorderLayout(10, 10));
+        tablePanel.setBorder(BorderFactory.createTitledBorder("Suggested Adjustments / Menu Items"));
+        tablePanel.add(new JScrollPane(menuTable), BorderLayout.CENTER);
+
+        // Editor row (add/update)
+        JPanel editorPanel = new JPanel(new GridLayout(2, 4, 10, 8));
+        editorPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        itemNameField = new JTextField();
+        basePriceField = new JTextField();
+        itemTypeDropdown = new JComboBox<>(new String[] { "Drink", "Food", "Addon" });
+
+        JButton addButton = new JButton("Add New Item");
+        addButton.addActionListener(e -> addMenuItem());
+
+        JButton updateButton = new JButton("Update Selected");
+        updateButton.addActionListener(e -> updateSelectedMenuItem());
+
+        editorPanel.add(new JLabel("Item Name"));
+        editorPanel.add(new JLabel("Type"));
+        editorPanel.add(new JLabel("Base Price"));
+        editorPanel.add(new JLabel(""));
+
+        editorPanel.add(itemNameField);
+        editorPanel.add(itemTypeDropdown);
+        editorPanel.add(basePriceField);
+        editorPanel.add(addButton);
+
+        tablePanel.add(editorPanel, BorderLayout.SOUTH);
+
+        JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        bottomButtons.add(updateButton);
+
+        tablePanel.add(bottomButtons, BorderLayout.NORTH);
+
+        left.add(tablePanel, BorderLayout.CENTER);
+
+        return left;
+    }
+
+    // Right sidebar: Summary + Featured Items list (matches wireframe blocks)
+    private JPanel buildRightSidebar() {
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
+        right.setPreferredSize(new Dimension(320, 0));
+
+        JPanel summaryPanel = new JPanel();
+        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
+        summaryPanel.setBorder(BorderFactory.createTitledBorder("Summary"));
+        summaryPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+
+        totalItemsValue = new JLabel("0");
+        avgPriceValue = new JLabel("$0.00");
+        lastUpdatedValue = new JLabel("—");
+
+        summaryPanel.add(makeSummaryRow("Total Items:", totalItemsValue));
+        summaryPanel.add(makeSummaryRow("Avg Price:", avgPriceValue));
+        summaryPanel.add(makeSummaryRow("Last Updated:", lastUpdatedValue));
+
+        featuredModel = new DefaultListModel<>();
+        featuredList = new JList<>(featuredModel);
+
+        JPanel featuredPanel = new JPanel(new BorderLayout());
+        featuredPanel.setBorder(BorderFactory.createTitledBorder("Featured Items (Top Sellers)"));
+        featuredPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 340));
+        featuredPanel.add(new JScrollPane(featuredList), BorderLayout.CENTER);
+
+        JPanel spacer = new JPanel();
+        spacer.setPreferredSize(new Dimension(0, 10));
+
+        right.add(summaryPanel);
+        right.add(Box.createVerticalStrut(10));
+        right.add(featuredPanel);
+        right.add(Box.createVerticalGlue());
+
+        return right;
+    }
 
 }   
