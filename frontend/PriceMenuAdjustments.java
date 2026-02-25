@@ -460,4 +460,74 @@ public class PriceMenuAdjustments extends JFrame {
         }
     }
 
-}   
+    // Loads featured list from top sellers
+    private void loadFeaturedItems() {
+        featuredModel.clear();
+
+        String sql =
+                "SELECT mi.item_name, " +
+                "       COALESCE(SUM(oli.quantity * oli.sale_price), 0) AS revenue " +
+                "FROM Orders o " +
+                "JOIN Order_Line_Items oli ON o.order_id = oli.order_id " +
+                "JOIN Menu_Items mi ON mi.menu_item_id = oli.menu_item_id " +
+                "GROUP BY mi.item_name " +
+                "ORDER BY revenue DESC " +
+                "LIMIT 8";
+
+           try (Connection conn = Database.getConnection();
+               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                featuredModel.addElement("No data (DB not connected)");
+                return;
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                boolean any = false;
+                while (rs.next()) {
+                    any = true;
+                    String item = rs.getString("item_name");
+                    double revenue = rs.getDouble("revenue");
+                    featuredModel.addElement(String.format("%s  —  $%.2f", item, revenue));
+                }
+
+                if (!any) {
+                    featuredModel.addElement("No orders yet");
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            featuredModel.addElement("Error loading featured items");
+        }
+    }
+
+    // Loads menu summary metrics (total items, avg price, last updated)
+    private void loadMenuSummary() {
+        String sql =
+                "SELECT COUNT(*) AS total_items, " +
+                "       COALESCE(AVG(base_price), 0) AS avg_price, " +
+                "       MAX(menu_item_id) AS last_id " +
+                "FROM Menu_Items";
+
+           try (Connection conn = Database.getConnection();
+               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int totalItems = rs.getInt("total_items");
+                    double avgPrice = rs.getDouble("avg_price");
+
+                    totalItemsValue.setText(String.valueOf(totalItems));
+                    avgPriceValue.setText(String.format("$%.2f", avgPrice));
+                    lastUpdatedValue.setText("Menu updated");
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+}
