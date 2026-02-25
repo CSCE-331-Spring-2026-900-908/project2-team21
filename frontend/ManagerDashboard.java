@@ -3,6 +3,7 @@ package frontend;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,6 +21,17 @@ public class ManagerDashboard extends JFrame {
     private DefaultTableModel salesByDayModel;
     private DefaultTableModel topItemsModel;
     private DefaultTableModel employeeSalesModel;
+
+    // Employee management (inside Employee Sales tab)
+    private DefaultTableModel employeesModel;
+    private JTable employeesTable;
+
+    private JTextField firstNameField;
+    private JTextField lastNameField;
+    private JComboBox<String> roleDropdown;
+
+    private JButton addEmployeeButton;
+    private JButton deleteEmployeeButton;
 
     public ManagerDashboard(int managerId, String managerName) {
         this.managerId = managerId;
@@ -99,11 +111,10 @@ public class ManagerDashboard extends JFrame {
         JTable topItemsTable = new JTable(topItemsModel);
 
         employeeSalesModel = new DefaultTableModel(new Object[] { "Employee", "Orders", "Revenue" }, 0);
-        JTable employeeSalesTable = new JTable(employeeSalesModel);
 
         JTabbedPane rightTabs = new JTabbedPane();
         rightTabs.addTab("Top Items", new JScrollPane(topItemsTable));
-        rightTabs.addTab("Employee Sales", new JScrollPane(employeeSalesTable));
+        rightTabs.addTab("Employee Sales", buildEmployeeSalesTab());
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -117,6 +128,68 @@ public class ManagerDashboard extends JFrame {
         return main;
     }
 
+    // Employee Sales tab: analytics table + add/delete employee section
+    private JPanel buildEmployeeSalesTab() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Top: Employee sales analytics
+        JTable employeeSalesTable = new JTable(employeeSalesModel);
+        panel.add(new JScrollPane(employeeSalesTable), BorderLayout.CENTER);
+
+        // Bottom: Add/Delete employees
+        panel.add(buildEmployeeManagementPanel(), BorderLayout.SOUTH);
+
+        // Initial load for employee list (delete section)
+        loadEmployeesTable();
+
+        return panel;
+    }
+
+    // Builds the Add/Delete employee panel shown under Employee Sales
+    private JPanel buildEmployeeManagementPanel() {
+        JPanel container = new JPanel(new BorderLayout(10, 10));
+        container.setBorder(BorderFactory.createTitledBorder("Manage Employees"));
+
+        employeesModel = new DefaultTableModel(new Object[] { "ID", "First Name", "Last Name", "Role" }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        employeesTable = new JTable(employeesModel);
+        employeesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JScrollPane tableScroll = new JScrollPane(employeesTable);
+        tableScroll.setPreferredSize(new Dimension(900, 160));
+        container.add(tableScroll, BorderLayout.CENTER);
+
+        JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+
+        firstNameField = new JTextField(10);
+        lastNameField = new JTextField(10);
+        roleDropdown = new JComboBox<>(new String[] { "Cashier", "Manager" });
+
+        addEmployeeButton = new JButton("Add Employee");
+        addEmployeeButton.addActionListener(e -> addEmployee());
+
+        deleteEmployeeButton = new JButton("Delete Selected");
+        deleteEmployeeButton.addActionListener(e -> deleteSelectedEmployee());
+
+        form.add(new JLabel("First:"));
+        form.add(firstNameField);
+        form.add(new JLabel("Last:"));
+        form.add(lastNameField);
+        form.add(new JLabel("Role:"));
+        form.add(roleDropdown);
+        form.add(addEmployeeButton);
+        form.add(deleteEmployeeButton);
+
+        container.add(form, BorderLayout.SOUTH);
+
+        return container;
+    }
+
     // Refresh all analytics based on selected date range
     private void refreshAnalytics() {
         Timestamp startTimestamp = getStartTimestampFromRange();
@@ -125,6 +198,9 @@ public class ManagerDashboard extends JFrame {
         loadSalesByDay(startTimestamp);
         loadTopItems(startTimestamp);
         loadEmployeeSales(startTimestamp);
+
+        // keep the employee list current too
+        loadEmployeesTable();
     }
 
     // Date range -> start timestamp (or null for All Time)
@@ -218,7 +294,7 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
         }
     }
-    
+
     // Loads top selling drink items (qty + revenue)
     private void loadTopItems(Timestamp startTimestamp) {
         topItemsModel.setRowCount(0);
@@ -298,14 +374,143 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
         }
     }
-    
+
+    // Loads all employees into the employees table (for delete selection)
+    private void loadEmployeesTable() {
+        if (employeesModel == null) return;
+
+        employeesModel.setRowCount(0);
+
+        String sql =
+                "SELECT employee_id, first_name, last_name, role " +
+                "FROM Employees " +
+                "ORDER BY employee_id ASC";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    employeesModel.addRow(new Object[] {
+                            rs.getInt("employee_id"),
+                            rs.getString("first_name"),
+                            rs.getString("last_name"),
+                            rs.getString("role")
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error loading employees.");
+        }
+    }
+
+    // Add employee (matches schema: role must be 'Cashier' or 'Manager')
+    private void addEmployee() {
+        String first = firstNameField.getText().trim();
+        String last = lastNameField.getText().trim();
+        String role = (String) roleDropdown.getSelectedItem();
+
+        if (first.isEmpty() || last.isEmpty() || role == null) {
+            JOptionPane.showMessageDialog(this, "Please enter first name, last name, and role.");
+            return;
+        }
+
+        String sql = "INSERT INTO Employees (first_name, last_name, role) VALUES (?, ?, ?)";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            pstmt.setString(1, first);
+            pstmt.setString(2, last);
+            pstmt.setString(3, role);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                firstNameField.setText("");
+                lastNameField.setText("");
+                roleDropdown.setSelectedIndex(0);
+
+                loadEmployeesTable();
+                refreshAnalytics();
+
+                JOptionPane.showMessageDialog(this, "Employee added.");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error adding employee.");
+        }
+    }
+
+    // Delete selected employee (may fail if employee is referenced by Orders)
+    private void deleteSelectedEmployee() {
+        if (employeesTable == null || employeesModel == null) return;
+
+        int row = employeesTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Select an employee to delete.");
+            return;
+        }
+
+        int employeeId = (int) employeesModel.getValueAt(row, 0);
+        String employeeName = employeesModel.getValueAt(row, 1) + " " + employeesModel.getValueAt(row, 2);
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Delete employee: " + employeeName + " (ID " + employeeId + ")?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        String sql = "DELETE FROM Employees WHERE employee_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            pstmt.setInt(1, employeeId);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                loadEmployeesTable();
+                refreshAnalytics();
+                JOptionPane.showMessageDialog(this, "Employee deleted.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Employee not found.");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Could not delete employee. They may be referenced by existing orders."
+            );
+        }
+    }
+
     // Inventory System view
     private void openInventorySystem() {
         dispose();
         new InventorySystem(managerId, managerName).setVisible(true);
     }
 
-    // // Price Adjustment view
+    // Price Adjustment view
     private void openPriceMenuAdjustments() {
         dispose();
         new PriceMenuAdjustments(managerId, managerName).setVisible(true);
