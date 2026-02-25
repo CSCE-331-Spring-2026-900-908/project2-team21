@@ -217,7 +217,7 @@ public class PriceMenuAdjustments extends JFrame {
 
         return right;
     }
-    
+
     // Creates a summary row with a label and value.
     private JPanel makeSummaryRow(String label, JLabel valueLabel) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
@@ -330,6 +330,133 @@ public class PriceMenuAdjustments extends JFrame {
         } catch (SQLException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error adding item (name may need to be unique).");
+        }
+    }
+
+    // Update selected menu item price/type/name
+    private void updateSelectedMenuItem() {
+        int row = menuTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Select a menu item first.");
+            return;
+        }
+
+        int menuItemId = (int) menuModel.getValueAt(row, 0);
+
+        String itemName = itemNameField.getText().trim();
+        String itemType = (String) itemTypeDropdown.getSelectedItem();
+        String priceStr = basePriceField.getText().trim();
+
+        if (itemName.isEmpty() || itemType == null || priceStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill Item Name, Type, and Base Price.");
+            return;
+        }
+
+        BigDecimal basePrice;
+        try {
+            basePrice = new BigDecimal(priceStr);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Base Price must be numeric.");
+            return;
+        }
+
+        if (basePrice.compareTo(BigDecimal.ZERO) < 0) {
+            JOptionPane.showMessageDialog(this, "Base Price must be >= 0.");
+            return;
+        }
+
+        String sql =
+                "UPDATE Menu_Items " +
+                "SET item_name = ?, item_type = ?, base_price = ? " +
+                "WHERE menu_item_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed.");
+                return;
+            }
+
+            pstmt.setString(1, itemName);
+            pstmt.setString(2, itemType);
+            pstmt.setBigDecimal(3, basePrice);
+            pstmt.setInt(4, menuItemId);
+
+            int updated = pstmt.executeUpdate();
+            if (updated == 1) {
+                JOptionPane.showMessageDialog(this, "Menu item updated!");
+                loadMenuItems();
+                loadOrderHistoryAnalysis();
+                loadFeaturedItems();
+                loadMenuSummary();
+            } else {
+                JOptionPane.showMessageDialog(this, "Update failed (item not found).");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error updating item.");
+        }
+    }
+
+    // Clears the editor input fields.
+    private void clearFields() {
+        itemNameField.setText("");
+        basePriceField.setText("");
+        itemTypeDropdown.setSelectedIndex(0);
+    }
+
+    // Returns to the manager dashboard.
+    private void openManagerDashboard() {
+        dispose();
+        new ManagerDashboard(managerId, managerName).setVisible(true);
+    }
+
+    // Opens the manage employees screen placeholder.
+    private void openManageEmployees() {
+        JOptionPane.showMessageDialog(this, "Manage Employees coming soon!");
+    }
+
+    // Logout back to login page
+    private void handleLogout() {
+        dispose();
+        LoginScreen loginScreen = new LoginScreen();
+        loginScreen.setVisible(true);
+    }
+
+    // Loads sales summary table (units + revenue) by item
+    private void loadOrderHistoryAnalysis() {
+        orderHistoryModel.setRowCount(0);
+
+        String sql =
+                "SELECT mi.item_name, " +
+                "       COALESCE(SUM(oli.quantity), 0) AS units_sold, " +
+                "       COALESCE(SUM(oli.quantity * oli.sale_price), 0) AS revenue " +
+                "FROM Orders o " +
+                "JOIN Order_Line_Items oli ON o.order_id = oli.order_id " +
+                "JOIN Menu_Items mi ON mi.menu_item_id = oli.menu_item_id " +
+                "GROUP BY mi.item_name " +
+                "ORDER BY revenue DESC " +
+                "LIMIT 15";
+
+           try (Connection conn = Database.getConnection();
+               PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) {
+                return;
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    orderHistoryModel.addRow(new Object[] {
+                            rs.getString("item_name"),
+                            rs.getInt("units_sold"),
+                            String.format("$%.2f", rs.getDouble("revenue"))
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
