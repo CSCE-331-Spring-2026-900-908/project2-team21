@@ -21,6 +21,7 @@ public class ManagerDashboard extends JFrame {
     private DefaultTableModel salesByDayModel;
     private DefaultTableModel topItemsModel;
     private DefaultTableModel employeeSalesModel;
+    private DefaultTableModel productUsageModel;
 
     // Employee management (inside Employee Sales tab)
     private DefaultTableModel employeesModel;
@@ -111,10 +112,15 @@ public class ManagerDashboard extends JFrame {
         JTable topItemsTable = new JTable(topItemsModel);
 
         employeeSalesModel = new DefaultTableModel(new Object[] { "Employee", "Orders", "Revenue" }, 0);
+        
+        // NEW: Initialize Product Usage table
+        productUsageModel = new DefaultTableModel(new Object[] { "Inventory Item", "Total Quantity Used" }, 0);
+        JTable productUsageTable = new JTable(productUsageModel);
 
         JTabbedPane rightTabs = new JTabbedPane();
         rightTabs.addTab("Top Items", new JScrollPane(topItemsTable));
         rightTabs.addTab("Employee Sales", buildEmployeeSalesTab());
+        rightTabs.addTab("Product Usage", new JScrollPane(productUsageTable));
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -198,6 +204,7 @@ public class ManagerDashboard extends JFrame {
         loadSalesByDay(startTimestamp);
         loadTopItems(startTimestamp);
         loadEmployeeSales(startTimestamp);
+        loadProductUsage(startTimestamp);
 
         // keep the employee list current too
         loadEmployeesTable();
@@ -374,6 +381,54 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
         }
     }
+
+    // NEW METHOD: Loads product inventory usage based on the selected time window
+    private void loadProductUsage(Timestamp startTimestamp) {
+        productUsageModel.setRowCount(0);
+
+        // Combines base drink items and add-on items sold, then calculates the inventory used
+        String sql = 
+            "WITH All_Items_Sold AS ( " +
+            "    SELECT oli.menu_item_id, oli.quantity AS total_qty, o.order_timestamp " +
+            "    FROM Order_Line_Items oli " +
+            "    JOIN Orders o ON oli.order_id = o.order_id " +
+            "    UNION ALL " +
+            "    SELECT lia.add_on_menu_item_id AS menu_item_id, (oli.quantity * lia.quantity) AS total_qty, o.order_timestamp " +
+            "    FROM Line_Item_Add_Ons lia " +
+            "    JOIN Order_Line_Items oli ON lia.line_item_id = oli.line_item_id " +
+            "    JOIN Orders o ON oli.order_id = o.order_id " +
+            ") " +
+            "SELECT i.item_name, SUM(ais.total_qty * r.quantity_used) AS total_inventory_used " +
+            "FROM All_Items_Sold ais " +
+            "JOIN Recipes r ON ais.menu_item_id = r.menu_item_id " +
+            "JOIN Inventory i ON r.inventory_id = i.inventory_id " +
+            (startTimestamp != null ? "WHERE ais.order_timestamp >= ? " : "") +
+            "GROUP BY i.item_name " +
+            "ORDER BY total_inventory_used DESC";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) return;
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    productUsageModel.addRow(new Object[] {
+                            rs.getString("item_name"),
+                            String.format("%.2f", rs.getDouble("total_inventory_used")) // Formatted to 2 decimal places
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            System.err.println("Failed to load product usage.");
+        }
+    }
+
 
     // Loads all employees into the employees table (for delete selection)
     private void loadEmployeesTable() {
