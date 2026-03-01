@@ -1,2 +1,6 @@
+# Ignore login credentials
 frontend/Credentials.java
 frontend/Credentials.class
+
+# # Ignore Java compiled files
+*.class
