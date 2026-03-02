@@ -64,11 +64,9 @@ public class ManagerDashboard extends JFrame {
         leftPanel.add(menuPriceButton);
 
         rangeDropdown = new JComboBox<>(new String[] { "Last 7 Days", "Last 30 Days", "Last 365 Days", "All Time" });
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.addActionListener(e -> refreshAnalytics());
+        rangeDropdown.addActionListener(e -> refreshAnalytics());
 
         leftPanel.add(rangeDropdown);
-        leftPanel.add(refreshButton);
 
         JButton logoutButton = new JButton("Logout");
         logoutButton.setFont(new Font("Arial", Font.BOLD, 14));
