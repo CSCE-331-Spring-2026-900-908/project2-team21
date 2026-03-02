@@ -1,15 +1,14 @@
 package frontend;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class ManagerDashboard extends JFrame {
     private final int managerId;
@@ -118,7 +117,7 @@ public class ManagerDashboard extends JFrame {
         JTable productUsageTable = new JTable(productUsageModel);
 
         JTabbedPane rightTabs = new JTabbedPane();
-        rightTabs.addTab("Top Items", new JScrollPane(topItemsTable));
+        rightTabs.addTab("Sales Report", new JScrollPane(topItemsTable));
         rightTabs.addTab("Employee Sales", buildEmployeeSalesTab());
         rightTabs.addTab("Product Usage", new JScrollPane(productUsageTable));
 
