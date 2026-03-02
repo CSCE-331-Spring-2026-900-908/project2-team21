@@ -1,13 +1,13 @@
 package frontend;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class PriceMenuAdjustments extends JFrame {
     private final int managerId;
@@ -68,11 +68,9 @@ public class PriceMenuAdjustments extends JFrame {
         leftPanel.add(backButton);
 
         filterDropdown = new JComboBox<>(new String[] { "All", "Drink", "Food", "Addon" });
-        JButton applyFilterButton = new JButton("Apply Filter");
-        applyFilterButton.addActionListener(e -> loadMenuItems());
+        filterDropdown.addActionListener(e -> loadMenuItems());
 
         leftPanel.add(filterDropdown);
-        leftPanel.add(applyFilterButton);
 
         JButton logoutButton = new JButton("Logout");
         logoutButton.setFont(new Font("Arial", Font.BOLD, 14));
