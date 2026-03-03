@@ -588,8 +588,17 @@ public class ManagerDashboard extends JFrame {
                 totalSales += sales;
                 totalOrders += orders;
             }
+
+            if (!hasData) {
+                receipt.append("No open transactions for today.\n");
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to generate X-Report.");
+            return;
         }
-    }
+
         receipt.append("------------------------------------\n");
         receipt.append(String.format("TOTAL ORDERS: %d\n", totalOrders));
         receipt.append(String.format("GROSS SALES:  $%.2f\n", totalSales));
@@ -597,4 +606,5 @@ public class ManagerDashboard extends JFrame {
         receipt.append("      END OF X-REPORT READOUT       \n");
 
         showReceiptDialog("X-Report", receipt.toString());
+    }
 }
