@@ -590,4 +590,11 @@ public class ManagerDashboard extends JFrame {
             }
         }
     }
+        receipt.append("------------------------------------\n");
+        receipt.append(String.format("TOTAL ORDERS: %d\n", totalOrders));
+        receipt.append(String.format("GROSS SALES:  $%.2f\n", totalSales));
+        receipt.append("====================================\n");
+        receipt.append("      END OF X-REPORT READOUT       \n");
+
+        showReceiptDialog("X-Report", receipt.toString());
 }
