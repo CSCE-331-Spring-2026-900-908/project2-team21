@@ -312,7 +312,9 @@ public class InventorySystem extends JFrame {
                     : "Inventory item added!");
             clearFields();
             loadInventory();
+
         } catch (SQLException ex) {
+            try { conn.rollback(); } catch (SQLException ignored) {}
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error adding item (name must be unique).\nIf you intended to update, select the item and click Update.");
         } finally {
@@ -390,6 +392,18 @@ public class InventorySystem extends JFrame {
         itemNameField.setText("");
         quantityField.setText("");
         reorderLevelField.setText("");
+
+        if (alsoCreateMenuBox != null) {
+            alsoCreateMenuBox.setSelected(false);
+        }
+        if (menuPriceField != null) {
+            menuPriceField.setText("");
+            menuPriceField.setEnabled(false);
+        }
+        if (menuTypeDropdown != null) {
+            menuTypeDropdown.setSelectedIndex(0);
+            menuTypeDropdown.setEnabled(false);
+        }
     }
 
     private void openManagerDashboard() {
