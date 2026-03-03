@@ -537,4 +537,25 @@ public class ManagerDashboard extends JFrame {
         LoginScreen loginScreen = new LoginScreen();
         loginScreen.setVisible(true);
     }
+
+    // The X-Report looks at today's orders that haven't been "closed" by a Z-Report yet
+    private void generateXReport() {
+        String sql = 
+            "SELECT EXTRACT(HOUR FROM order_timestamp) AS hour_of_day, " +
+            "       COUNT(order_id) AS orders_count, " +
+            "       COALESCE(SUM(total_amount), 0) AS hour_sales " +
+            "FROM Orders " +
+            "WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE " +
+            "GROUP BY hour_of_day " +
+            "ORDER BY hour_of_day";
+
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("====================================\n");
+        receipt.append("             X - REPORT             \n");
+        receipt.append("====================================\n");
+        receipt.append("Date: ").append(java.time.LocalDate.now()).append("\n");
+        receipt.append("Manager: ").append(managerName).append("\n\n");
+        receipt.append(String.format("%-10s %-10s %-10s\n", "HOUR", "ORDERS", "SALES"));
+        receipt.append("------------------------------------\n");
+    }
 }
