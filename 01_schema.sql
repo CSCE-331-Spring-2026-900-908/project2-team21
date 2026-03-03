@@ -26,7 +26,7 @@ CREATE TABLE Menu_Items (
   item_name    VARCHAR(100) NOT NULL UNIQUE,
   base_price   NUMERIC(6,2) NOT NULL CHECK (base_price >= 0),
   item_type    VARCHAR(20) NOT NULL DEFAULT 'Drink'
-    CHECK (item_type IN ('Drink','Addon'))
+    CHECK (item_type IN ('Drink','Addon','Food'))
 );
 
 
