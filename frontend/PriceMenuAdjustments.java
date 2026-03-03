@@ -22,6 +22,11 @@ public class PriceMenuAdjustments extends JFrame {
     private JTextField basePriceField;
     private JComboBox<String> itemTypeDropdown;
 
+    // NEW: optional cross-table creation
+    private JCheckBox alsoCreateInventoryBox;
+    private JTextField invQtyField;
+    private JTextField invReorderField;
+
     private DefaultTableModel orderHistoryModel;
     private JTable orderHistoryTable;
 
@@ -103,7 +108,7 @@ public class PriceMenuAdjustments extends JFrame {
 
         return main;
     }
-    
+
     // Left area: chart placeholder + "Suggested Adjustments" (table + editor)
     private JPanel buildLeftArea() {
         JPanel left = new JPanel(new BorderLayout(10, 10));
@@ -168,7 +173,33 @@ public class PriceMenuAdjustments extends JFrame {
         editorPanel.add(basePriceField);
         editorPanel.add(addButton);
 
-        tablePanel.add(editorPanel, BorderLayout.SOUTH);
+        // NEW: optional inventory creation row
+        alsoCreateInventoryBox = new JCheckBox("Also create inventory row");
+        invQtyField = new JTextField("0", 6);
+        invReorderField = new JTextField("0", 6);
+        invQtyField.setEnabled(false);
+        invReorderField.setEnabled(false);
+
+        alsoCreateInventoryBox.addActionListener(e -> {
+            boolean enabled = alsoCreateInventoryBox.isSelected();
+            invQtyField.setEnabled(enabled);
+            invReorderField.setEnabled(enabled);
+        });
+
+        JPanel invRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        invRow.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+        invRow.add(alsoCreateInventoryBox);
+        invRow.add(new JLabel("Initial Qty"));
+        invRow.add(invQtyField);
+        invRow.add(new JLabel("Reorder Level"));
+        invRow.add(invReorderField);
+
+        JPanel editorContainer = new JPanel();
+        editorContainer.setLayout(new BoxLayout(editorContainer, BoxLayout.Y_AXIS));
+        editorContainer.add(editorPanel);
+        editorContainer.add(invRow);
+
+        tablePanel.add(editorContainer, BorderLayout.SOUTH);
 
         JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         bottomButtons.add(updateButton);
@@ -193,7 +224,7 @@ public class PriceMenuAdjustments extends JFrame {
 
         totalItemsValue = new JLabel("0");
         avgPriceValue = new JLabel("$0.00");
-        lastUpdatedValue = new JLabel("—");
+        lastUpdatedValue = new JLabel("-");
 
         summaryPanel.add(makeSummaryRow("Total Items:", totalItemsValue));
         summaryPanel.add(makeSummaryRow("Avg Price:", avgPriceValue));
@@ -206,9 +237,6 @@ public class PriceMenuAdjustments extends JFrame {
         featuredPanel.setBorder(BorderFactory.createTitledBorder("Featured Items (Top Sellers)"));
         featuredPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 340));
         featuredPanel.add(new JScrollPane(featuredList), BorderLayout.CENTER);
-
-        JPanel spacer = new JPanel();
-        spacer.setPreferredSize(new Dimension(0, 10));
 
         right.add(summaryPanel);
         right.add(Box.createVerticalStrut(10));
@@ -303,33 +331,80 @@ public class PriceMenuAdjustments extends JFrame {
             return;
         }
 
-        String sql =
-                "INSERT INTO Menu_Items(item_name, item_type, base_price) " +
-                "VALUES (?, ?, ?)";
+        boolean alsoCreateInventory = alsoCreateInventoryBox != null && alsoCreateInventoryBox.isSelected();
+        BigDecimal invQty = null;
+        BigDecimal invReorder = null;
 
-        try (Connection conn = Database.getConnection();
-             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
-
-            if (conn == null || pstmt == null) {
-                JOptionPane.showMessageDialog(this, "Database connection failed.");
+        if (alsoCreateInventory) {
+            try {
+                invQty = new BigDecimal(invQtyField.getText().trim());
+                invReorder = new BigDecimal(invReorderField.getText().trim());
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Inventory Qty and Reorder Level must be numeric.");
                 return;
             }
 
-            pstmt.setString(1, itemName);
-            pstmt.setString(2, itemType);
-            pstmt.setBigDecimal(3, basePrice);
+            if (invQty.compareTo(BigDecimal.ZERO) < 0 || invReorder.compareTo(BigDecimal.ZERO) < 0) {
+                JOptionPane.showMessageDialog(this, "Inventory Qty and Reorder Level must be >= 0.");
+                return;
+            }
+        }
 
-            pstmt.executeUpdate();
+        String menuSql =
+                "INSERT INTO Menu_Items(item_name, item_type, base_price) " +
+                "VALUES (?, ?, ?)";
 
-            JOptionPane.showMessageDialog(this, "Menu item added!");
+        String invSql =
+                "INSERT INTO Inventory(item_name, quantity_in_stock, reorder_level) " +
+                "VALUES (?, ?, ?) " +
+                "ON CONFLICT (item_name) DO NOTHING";
+
+        Connection conn = Database.getConnection();
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "Database connection failed.");
+            return;
+        }
+
+        try {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement menuStmt = conn.prepareStatement(menuSql)) {
+                menuStmt.setString(1, itemName);
+                menuStmt.setString(2, itemType);
+                menuStmt.setBigDecimal(3, basePrice);
+                menuStmt.executeUpdate();
+            }
+
+            if (alsoCreateInventory) {
+                try (PreparedStatement invStmt = conn.prepareStatement(invSql)) {
+                    invStmt.setString(1, itemName);
+                    invStmt.setBigDecimal(2, invQty);
+                    invStmt.setBigDecimal(3, invReorder);
+                    invStmt.executeUpdate();
+                }
+            }
+
+            conn.commit();
+
+            JOptionPane.showMessageDialog(this, alsoCreateInventory
+                    ? "Menu item added (and inventory row created if missing)!"
+                    : "Menu item added!");
+
             clearFields();
             loadMenuItems();
             loadOrderHistoryAnalysis();
             loadFeaturedItems();
             loadMenuSummary();
+
         } catch (SQLException ex) {
+            try { conn.rollback(); } catch (SQLException ignored) {}
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error adding item (name may need to be unique).");
+        } finally {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (SQLException ignored) {}
         }
     }
 
@@ -404,6 +479,18 @@ public class PriceMenuAdjustments extends JFrame {
         itemNameField.setText("");
         basePriceField.setText("");
         itemTypeDropdown.setSelectedIndex(0);
+
+        if (alsoCreateInventoryBox != null) {
+            alsoCreateInventoryBox.setSelected(false);
+        }
+        if (invQtyField != null) {
+            invQtyField.setText("0");
+            invQtyField.setEnabled(false);
+        }
+        if (invReorderField != null) {
+            invReorderField.setText("0");
+            invReorderField.setEnabled(false);
+        }
     }
 
     // Returns to the manager dashboard.
@@ -440,8 +527,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "ORDER BY revenue DESC " +
                 "LIMIT 15";
 
-                try (Connection conn = Database.getConnection();
-                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 return;
@@ -475,8 +562,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "ORDER BY revenue DESC " +
                 "LIMIT 8";
 
-                try (Connection conn = Database.getConnection();
-                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 featuredModel.addElement("No data (DB not connected)");
@@ -489,7 +576,7 @@ public class PriceMenuAdjustments extends JFrame {
                     any = true;
                     String item = rs.getString("item_name");
                     double revenue = rs.getDouble("revenue");
-                    featuredModel.addElement(String.format("%s  —  $%.2f", item, revenue));
+                    featuredModel.addElement(String.format("%s  -  $%.2f", item, revenue));
                 }
 
                 if (!any) {
@@ -510,8 +597,8 @@ public class PriceMenuAdjustments extends JFrame {
                 "       MAX(menu_item_id) AS last_id " +
                 "FROM Menu_Items";
 
-                try (Connection conn = Database.getConnection();
-                         PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
 
             if (conn == null || pstmt == null) {
                 return;
