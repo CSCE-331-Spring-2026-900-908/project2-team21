@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.sql.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -69,6 +70,20 @@ public class ManagerDashboard extends JFrame {
 
         leftPanel.add(rangeDropdown);
         leftPanel.add(refreshButton);
+
+        // X-Report and Z-Report buttons
+        JButton xReportButton = new JButton("Run X-Report");
+        xReportButton.setBackground(new Color(23, 162, 184)); // Teal
+        xReportButton.setForeground(Color.WHITE);
+        xReportButton.addActionListener(e -> generateXReport());
+
+        JButton zReportButton = new JButton("Run Z-Report");
+        zReportButton.setBackground(new Color(220, 53, 69)); // Red
+        zReportButton.setForeground(Color.WHITE);
+        zReportButton.addActionListener(e -> generateZReport());
+
+        leftPanel.add(xReportButton);
+        leftPanel.add(zReportButton);
 
         JButton logoutButton = new JButton("Logout");
         logoutButton.setFont(new Font("Arial", Font.BOLD, 14));
