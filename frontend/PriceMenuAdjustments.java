@@ -22,7 +22,7 @@ public class PriceMenuAdjustments extends JFrame {
     private JTextField basePriceField;
     private JComboBox<String> itemTypeDropdown;
 
-    // NEW: optional cross-table creation
+    // NEW: optional cross-table creation of inventory row when adding a menu item
     private JCheckBox alsoCreateInventoryBox;
     private JTextField invQtyField;
     private JTextField invReorderField;
