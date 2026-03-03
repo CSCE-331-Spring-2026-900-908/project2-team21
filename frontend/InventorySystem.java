@@ -20,6 +20,11 @@ public class InventorySystem extends JFrame {
     private JTextField quantityField;
     private JTextField reorderLevelField;
 
+    // NEW: optional cross-table creation
+    private JCheckBox alsoCreateMenuBox;
+    private JTextField menuPriceField;
+    private JComboBox<String> menuTypeDropdown;
+
     private JButton addButton;
     private JButton updateSelectedButton;
 
@@ -108,6 +113,32 @@ public class InventorySystem extends JFrame {
         controls.add(makeLabeledField("Quantity In Stock", quantityField));
         controls.add(Box.createVerticalStrut(10));
         controls.add(makeLabeledField("Reorder Level", reorderLevelField));
+        controls.add(Box.createVerticalStrut(15));
+
+        // NEW: optional menu creation controls
+        alsoCreateMenuBox = new JCheckBox("Also create menu item");
+        menuPriceField = new JTextField();
+        menuTypeDropdown = new JComboBox<>(new String[] { "Drink", "Addon" });
+
+        menuPriceField.setEnabled(false);
+        menuTypeDropdown.setEnabled(false);
+
+        alsoCreateMenuBox.addActionListener(e -> {
+            boolean enabled = alsoCreateMenuBox.isSelected();
+            menuPriceField.setEnabled(enabled);
+            menuTypeDropdown.setEnabled(enabled);
+        });
+
+        controls.add(alsoCreateMenuBox);
+        controls.add(Box.createVerticalStrut(8));
+        controls.add(makeLabeledField("Menu Base Price", menuPriceField));
+        controls.add(Box.createVerticalStrut(8));
+
+        JPanel typePanel = new JPanel(new BorderLayout(5, 5));
+        typePanel.add(new JLabel("Menu Type"), BorderLayout.NORTH);
+        typePanel.add(menuTypeDropdown, BorderLayout.CENTER);
+        controls.add(typePanel);
+
         controls.add(Box.createVerticalStrut(15));
 
         addButton = new JButton("Add New Item");
@@ -214,30 +245,81 @@ public class InventorySystem extends JFrame {
             return;
         }
 
-        String sql =
-                "INSERT INTO Inventory(item_name, quantity_in_stock, reorder_level) " +
-                "VALUES (?, ?, ?)";
+        boolean alsoCreateMenu = alsoCreateMenuBox != null && alsoCreateMenuBox.isSelected();
+        BigDecimal basePrice = null;
+        String itemType = null;
 
-        try (Connection conn = Database.getConnection();
-             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+        if (alsoCreateMenu) {
+            String priceStr = menuPriceField.getText().trim();
+            itemType = (String) menuTypeDropdown.getSelectedItem();
 
-            if (conn == null || pstmt == null) {
-                JOptionPane.showMessageDialog(this, "Database connection failed.");
+            if (priceStr.isEmpty() || itemType == null) {
+                JOptionPane.showMessageDialog(this, "If creating a menu item, please fill Menu Base Price and Menu Type.");
                 return;
             }
 
-            pstmt.setString(1, itemName);
-            pstmt.setBigDecimal(2, quantity);
-            pstmt.setBigDecimal(3, reorder);
+            try {
+                basePrice = new BigDecimal(priceStr);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Menu Base Price must be numeric.");
+                return;
+            }
 
-            pstmt.executeUpdate();
+            if (basePrice.compareTo(BigDecimal.ZERO) < 0) {
+                JOptionPane.showMessageDialog(this, "Menu Base Price must be >= 0.");
+                return;
+            }
+        }
 
-            JOptionPane.showMessageDialog(this, "Inventory item added!");
+        String invSql =
+                "INSERT INTO Inventory(item_name, quantity_in_stock, reorder_level) " +
+                "VALUES (?, ?, ?)";
+
+        String menuSql =
+                "INSERT INTO Menu_Items(item_name, item_type, base_price) " +
+                "VALUES (?, ?, ?) " +
+                "ON CONFLICT (item_name) DO NOTHING";
+
+        Connection conn = Database.getConnection();
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "Database connection failed.");
+            return;
+        }
+
+        try {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement invStmt = conn.prepareStatement(invSql)) {
+                invStmt.setString(1, itemName);
+                invStmt.setBigDecimal(2, quantity);
+                invStmt.setBigDecimal(3, reorder);
+                invStmt.executeUpdate();
+            }
+
+            if (alsoCreateMenu) {
+                try (PreparedStatement menuStmt = conn.prepareStatement(menuSql)) {
+                    menuStmt.setString(1, itemName);
+                    menuStmt.setString(2, itemType);
+                    menuStmt.setBigDecimal(3, basePrice);
+                    menuStmt.executeUpdate();
+                }
+            }
+
+            conn.commit();
+
+            JOptionPane.showMessageDialog(this, alsoCreateMenu
+                    ? "Inventory item added (and menu item created if missing)!"
+                    : "Inventory item added!");
             clearFields();
             loadInventory();
         } catch (SQLException ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error adding item (name must be unique).");
+            JOptionPane.showMessageDialog(this, "Error adding item (name must be unique).\nIf you intended to update, select the item and click Update.");
+        } finally {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (SQLException ignored) {}
         }
     }
 
