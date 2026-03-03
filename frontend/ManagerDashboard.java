@@ -557,5 +557,37 @@ public class ManagerDashboard extends JFrame {
         receipt.append("Manager: ").append(managerName).append("\n\n");
         receipt.append(String.format("%-10s %-10s %-10s\n", "HOUR", "ORDERS", "SALES"));
         receipt.append("------------------------------------\n");
+
+        double totalSales = 0.0;
+        int totalOrders = 0;
+
+        try (Connection conn = Database.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery()) {
+
+            boolean hasData = false;
+            while (rs.next()) {
+                hasData = true;
+                int hour = rs.getInt("hour_of_day");
+                int orders = rs.getInt("orders_count");
+                double sales = rs.getDouble("hour_sales");
+                
+                // FIXED TIME FORMATTING
+                String timeStr;
+                if (hour == 0) {
+                    timeStr = "12 AM";
+                } else if (hour == 12) {
+                    timeStr = "12 PM";
+                } else if (hour > 12) {
+                    timeStr = (hour - 12) + " PM";
+                } else {
+                    timeStr = hour + " AM";
+                }
+
+                receipt.append(String.format("%-10s %-10d $%-9.2f\n", timeStr, orders, sales));
+                totalSales += sales;
+                totalOrders += orders;
+            }
+        }
     }
 }
