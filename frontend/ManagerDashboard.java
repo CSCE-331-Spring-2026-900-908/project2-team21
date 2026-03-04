@@ -639,6 +639,25 @@ public class ManagerDashboard extends JFrame {
         );
 
         if (confirm != JOptionPane.YES_OPTION) return;
+        String gatherSql =
+        "SELECT COUNT(order_id) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_sales " +
+        "FROM Orders WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE";
+        
+        double daySales = 0.0;
+        int dayOrders = 0;
+
+        try (Connection conn = Database.getConnection();
+            PreparedStatement gatherStmt = conn.prepareStatement(gatherSql);
+            ResultSet gatherRs = gatherStmt.executeQuery()) {
+            
+            if (gatherRs.next()) {
+                dayOrders = gatherRs.getInt("total_orders");
+                daySales = gatherRs.getDouble("total_sales");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return;
+        }
 
     }
     // A helper method to display the formatted text cleanly
