@@ -574,6 +574,95 @@ public class ManagerDashboard extends JFrame {
             );
         }
     }
+    
+    // NEW: Phase 4 Seasonal Menu Item Wizard
+    private void launchSeasonalWizard() {
+        JTextField drinkNameField = new JTextField(15);
+        JTextField drinkPriceField = new JTextField(10);
+        JTextField ingredientNameField = new JTextField(15);
+        JTextField initialStockField = new JTextField(10);
+
+        JPanel panel = new JPanel(new GridLayout(4, 2, 10, 10));
+        panel.add(new JLabel("Seasonal Drink Name:"));
+        panel.add(drinkNameField);
+        panel.add(new JLabel("Drink Price ($):"));
+        panel.add(drinkPriceField);
+        panel.add(new JLabel("New Ingredient Name:"));
+        panel.add(ingredientNameField);
+        panel.add(new JLabel("Initial Stock Quantity:"));
+        panel.add(initialStockField);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, 
+                 "Add New Seasonal Item & Inventory", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String drinkName = drinkNameField.getText().trim();
+            String ingredientName = ingredientNameField.getText().trim();
+            double drinkPrice;
+            double initialStock;
+
+            try {
+                drinkPrice = Double.parseDouble(drinkPriceField.getText().trim());
+                initialStock = Double.parseDouble(initialStockField.getText().trim());
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter valid numbers for Price and Stock.");
+                return;
+            }
+
+            if (drinkName.isEmpty() || ingredientName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Names cannot be empty.");
+                return;
+            }
+
+            // Execute the 3-step transaction
+            String insertInvSql = "INSERT INTO Inventory (item_name, quantity_in_stock, reorder_level) VALUES (?, ?, 50.0)";
+            String insertMenuSql = "INSERT INTO Menu_Items (item_name, base_price, item_type) VALUES (?, ?, 'Drink')";
+            String insertRecipeSql = "INSERT INTO Recipes (menu_item_id, inventory_id, quantity_used) VALUES (?, ?, 1.0)";
+
+            try (Connection conn = Database.getConnection()) {
+                if (conn == null) return;
+                
+                conn.setAutoCommit(false); // Start transaction
+
+                try (PreparedStatement invStmt = conn.prepareStatement(insertInvSql, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement menuStmt = conn.prepareStatement(insertMenuSql, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement recipeStmt = conn.prepareStatement(insertRecipeSql)) {
+
+                    // 1. Insert Inventory
+                    invStmt.setString(1, ingredientName);
+                    invStmt.setDouble(2, initialStock);
+                    invStmt.executeUpdate();
+                    
+                    int invId = -1;
+                    try (ResultSet rs = invStmt.getGeneratedKeys()) {
+                        if (rs.next()) invId = rs.getInt(1);
+                    }
+
+                    
+
+                    // 3. Link them in Recipes
+                    recipeStmt.setInt(1, menuId);
+                    recipeStmt.setInt(2, invId);
+                    recipeStmt.executeUpdate();
+
+                    conn.commit();
+                    JOptionPane.showMessageDialog(this, "Success! Seasonal item '" + drinkName + "' and ingredient '" + ingredientName + "' added to POS.");
+                    
+                    // Refresh the Top Items / Product Usage charts just in case
+                    refreshAnalytics();
+
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Failed to add seasonal item. Ensure the names don't already exist in the database.");
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
 
     // Inventory System view
     private void openInventorySystem() {
