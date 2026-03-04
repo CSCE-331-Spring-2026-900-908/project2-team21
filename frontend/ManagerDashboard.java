@@ -1,6 +1,8 @@
 package frontend;
 
 import java.awt.*;
+import java.math.BigDecimal;
+import java.sql.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -86,6 +88,20 @@ public class ManagerDashboard extends JFrame {
         rangeDropdown.addActionListener(e -> refreshAnalytics());
 
         leftPanel.add(rangeDropdown);
+
+        // X-Report and Z-Report buttons
+        JButton xReportButton = new JButton("Run X-Report");
+        xReportButton.setBackground(new Color(23, 162, 184)); // Teal
+        xReportButton.setForeground(Color.WHITE);
+        xReportButton.addActionListener(e -> generateXReport());
+
+        JButton zReportButton = new JButton("Run Z-Report");
+        zReportButton.setBackground(new Color(220, 53, 69)); // Red
+        zReportButton.setForeground(Color.WHITE);
+        zReportButton.addActionListener(e -> generateZReport());
+
+        leftPanel.add(xReportButton);
+        leftPanel.add(zReportButton);
 
         JButton logoutButton = new JButton("Logout");
         logoutButton.setFont(new Font("Arial", Font.BOLD, 14));
@@ -689,5 +705,201 @@ public class ManagerDashboard extends JFrame {
         dispose();
         LoginScreen loginScreen = new LoginScreen();
         loginScreen.setVisible(true);
+    }
+
+    // The X-Report looks at today's orders that haven't been "closed" by a Z-Report yet
+    private void generateXReport() {
+        String sql = 
+            "SELECT EXTRACT(HOUR FROM order_timestamp) AS hour_of_day, " +
+            "       COUNT(order_id) AS orders_count, " +
+            "       COALESCE(SUM(total_amount), 0) AS hour_sales " +
+            "FROM Orders " +
+            "WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE " +
+            "GROUP BY hour_of_day " +
+            "ORDER BY hour_of_day";
+
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("====================================\n");
+        receipt.append("             X - REPORT             \n");
+        receipt.append("====================================\n");
+        receipt.append("Date: ").append(java.time.LocalDate.now()).append("\n");
+        receipt.append("Manager: ").append(managerName).append("\n\n");
+        receipt.append(String.format("%-10s %-10s %-10s\n", "HOUR", "ORDERS", "SALES"));
+        receipt.append("------------------------------------\n");
+
+        double totalSales = 0.0;
+        int totalOrders = 0;
+
+        try (Connection conn = Database.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery()) {
+
+            boolean hasData = false;
+            while (rs.next()) {
+                hasData = true;
+                int hour = rs.getInt("hour_of_day");
+                int orders = rs.getInt("orders_count");
+                double sales = rs.getDouble("hour_sales");
+                
+                // FIXED TIME FORMATTING
+                String timeStr;
+                if (hour == 0) {
+                    timeStr = "12 AM";
+                } else if (hour == 12) {
+                    timeStr = "12 PM";
+                } else if (hour > 12) {
+                    timeStr = (hour - 12) + " PM";
+                } else {
+                    timeStr = hour + " AM";
+                }
+
+                receipt.append(String.format("%-10s %-10d $%-9.2f\n", timeStr, orders, sales));
+                totalSales += sales;
+                totalOrders += orders;
+            }
+
+            if (!hasData) {
+                receipt.append("No open transactions for today.\n");
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to generate X-Report.");
+            return;
+        }
+
+        receipt.append("------------------------------------\n");
+        receipt.append(String.format("TOTAL ORDERS: %d\n", totalOrders));
+        receipt.append(String.format("GROSS SALES:  $%.2f\n", totalSales));
+        receipt.append("====================================\n");
+        receipt.append("      END OF X-REPORT READOUT       \n");
+
+        showReceiptDialog("X-Report", receipt.toString());
+    }
+    //Z report looks at same things as x-report but at end of day and resets all values to 0 after for next day and next x report
+    private void generateZReport() {
+        
+        String checkSql = "SELECT COUNT(*) FROM Z_Reports WHERE report_date = CURRENT_DATE";
+        
+        try (Connection conn = Database.getConnection();
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            ResultSet checkRs = checkStmt.executeQuery()) {
+            
+            if (checkRs.next() && checkRs.getInt(1) > 0) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "A Z-Report has already been generated today. The drawer is closed.",
+                    "Z-Report Blocked",
+                    JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "WARNING: Generating the Z-Report will close out the drawer for the day and reset X-Report totals to zero.\n\nAre you sure you want to proceed?",
+            "Confirm Z-Report",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+        String gatherSql =
+        "SELECT COUNT(order_id) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_sales " +
+        "FROM Orders WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE";
+        
+        double daySales = 0.0;
+        int dayOrders = 0;
+
+        try (Connection conn = Database.getConnection();
+            PreparedStatement gatherStmt = conn.prepareStatement(gatherSql);
+            ResultSet gatherRs = gatherStmt.executeQuery()) {
+            
+            if (gatherRs.next()) {
+                dayOrders = gatherRs.getInt("total_orders");
+                daySales = gatherRs.getDouble("total_sales");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return;
+        }
+        String insertZReportSql =
+            "INSERT INTO Z_Reports (report_date, total_sales, manager_id) VALUES (CURRENT_DATE, ?, ?)";
+        String resetOrdersSql =
+            "UPDATE Orders SET is_closed = TRUE WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE";
+
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertZReportSql);
+                PreparedStatement resetStmt = conn.prepareStatement(resetOrdersSql)) {
+
+                insertStmt.setDouble(1, daySales);
+                insertStmt.setInt(2, managerId);
+                insertStmt.executeUpdate();
+
+                resetStmt.executeUpdate();
+
+                conn.commit();
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to execute Z-Report transaction.");
+            return;
+        }
+
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("====================================\n");
+        receipt.append("             Z - REPORT             \n");
+        receipt.append("          END OF DAY CLOSE          \n");
+        receipt.append("====================================\n");
+        receipt.append("Date: ").append(java.time.LocalDate.now()).append("\n");
+        receipt.append("Time: ").append(java.time.LocalTime.now().withNano(0)).append("\n");
+        receipt.append("Manager ID: ").append(managerId).append("\n");
+        receipt.append("Manager Name: ").append(managerName).append("\n\n");
+        receipt.append("------------------------------------\n");
+        receipt.append(String.format("TOTAL DAY ORDERS: %d\n", dayOrders));
+        receipt.append(String.format("TOTAL DAY SALES:  $%.2f\n", daySales));
+        receipt.append("------------------------------------\n");
+        receipt.append("SYSTEM STATUS: \n");
+        receipt.append("- ACTIVE ORDERS RESET TO ZERO\n");
+        receipt.append("- Z-REPORT LOCKED FOR REMAINDER OF DAY\n\n");
+        receipt.append("Manager Signature:\n\n\n");
+        receipt.append("X___________________________________\n");
+        receipt.append("====================================\n");
+
+        showReceiptDialog("Z-Report", receipt.toString());
+        
+    }
+    // A helper method to display the formatted text cleanly
+    private void showReceiptDialog(String title, String receiptText) {
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setLayout(new BorderLayout());
+        
+        JTextArea textArea = new JTextArea(receiptText);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        textArea.setEditable(false);
+        textArea.setMargin(new Insets(10, 10, 10, 10));
+        
+        dialog.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        
+        JButton closeBtn = new JButton("Close");
+        closeBtn.addActionListener(e -> dialog.dispose());
+        JPanel btnPanel = new JPanel();
+        btnPanel.add(closeBtn);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+        
+        dialog.setSize(400, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }
