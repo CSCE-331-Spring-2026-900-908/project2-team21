@@ -80,7 +80,7 @@ public class ManagerDashboard extends JFrame {
         JButton zReportButton = new JButton("Run Z-Report");
         zReportButton.setBackground(new Color(220, 53, 69)); // Red
         zReportButton.setForeground(Color.WHITE);
-        //zReportButton.addActionListener(e -> generateZReport());
+        zReportButton.addActionListener(e -> generateZReport());
 
         leftPanel.add(xReportButton);
         leftPanel.add(zReportButton);
@@ -606,6 +606,40 @@ public class ManagerDashboard extends JFrame {
         receipt.append("      END OF X-REPORT READOUT       \n");
 
         showReceiptDialog("X-Report", receipt.toString());
+    }
+    //Z report looks at same things as x-report but at end of day and resets all values to 0 after for next day and next x report
+    private void generateZReport() {
+        
+        String checkSql = "SELECT COUNT(*) FROM Z_Reports WHERE report_date = CURRENT_DATE";
+        
+        try (Connection conn = Database.getConnection();
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            ResultSet checkRs = checkStmt.executeQuery()) {
+            
+            if (checkRs.next() && checkRs.getInt(1) > 0) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "A Z-Report has already been generated today. The drawer is closed.",
+                    "Z-Report Blocked",
+                    JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "WARNING: Generating the Z-Report will close out the drawer for the day and reset X-Report totals to zero.\n\nAre you sure you want to proceed?",
+            "Confirm Z-Report",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
     }
     // A helper method to display the formatted text cleanly
     private void showReceiptDialog(String title, String receiptText) {
