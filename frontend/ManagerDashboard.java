@@ -1,7 +1,5 @@
 package frontend;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -9,8 +7,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class ManagerDashboard extends JFrame {
     private final int managerId;
@@ -22,6 +23,7 @@ public class ManagerDashboard extends JFrame {
     private DefaultTableModel salesByDayModel;
     private DefaultTableModel topItemsModel;
     private DefaultTableModel employeeSalesModel;
+    private DefaultTableModel productUsageModel;
 
     // Employee management (inside Employee Sales tab)
     private DefaultTableModel employeesModel;
@@ -64,12 +66,28 @@ public class ManagerDashboard extends JFrame {
         menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
         leftPanel.add(menuPriceButton);
 
+        // NEW: Seasonal Menu Item Box
+        JPanel seasonalBox = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        seasonalBox.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(220, 83, 69), 2), // Thick red/orange border
+            "NEW SEASONAL MENU ITEM",
+            javax.swing.border.TitledBorder.CENTER,
+            javax.swing.border.TitledBorder.TOP,
+            new Font("Arial", Font.BOLD, 12),
+            new Color(220, 83, 69)
+        ));
+
+        JButton addSeasonalBtn = new JButton("+ Add Seasonal Item & Inventory");
+        addSeasonalBtn.setFont(new Font("Arial", Font.BOLD, 12));
+        addSeasonalBtn.addActionListener(e -> launchSeasonalWizard());
+        seasonalBox.add(addSeasonalBtn);
+
+        leftPanel.add(seasonalBox);
+
         rangeDropdown = new JComboBox<>(new String[] { "Last 7 Days", "Last 30 Days", "Last 365 Days", "All Time" });
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.addActionListener(e -> refreshAnalytics());
+        rangeDropdown.addActionListener(e -> refreshAnalytics());
 
         leftPanel.add(rangeDropdown);
-        leftPanel.add(refreshButton);
 
         // X-Report and Z-Report buttons
         JButton xReportButton = new JButton("Run X-Report");
@@ -126,10 +144,15 @@ public class ManagerDashboard extends JFrame {
         JTable topItemsTable = new JTable(topItemsModel);
 
         employeeSalesModel = new DefaultTableModel(new Object[] { "Employee", "Orders", "Revenue" }, 0);
+        
+        // Initialize Product Usage table
+        productUsageModel = new DefaultTableModel(new Object[] { "Inventory Item", "Total Quantity Used" }, 0);
+        JTable productUsageTable = new JTable(productUsageModel);
 
         JTabbedPane rightTabs = new JTabbedPane();
-        rightTabs.addTab("Top Items", new JScrollPane(topItemsTable));
+        rightTabs.addTab("Sales Report", new JScrollPane(topItemsTable));
         rightTabs.addTab("Employee Sales", buildEmployeeSalesTab());
+        rightTabs.addTab("Product Usage", new JScrollPane(productUsageTable));
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -213,6 +236,7 @@ public class ManagerDashboard extends JFrame {
         loadSalesByDay(startTimestamp);
         loadTopItems(startTimestamp);
         loadEmployeeSales(startTimestamp);
+        loadProductUsage(startTimestamp);
 
         // keep the employee list current too
         loadEmployeesTable();
@@ -390,6 +414,54 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
+    // NEW METHOD: Loads product inventory usage based on the selected time window
+    private void loadProductUsage(Timestamp startTimestamp) {
+        productUsageModel.setRowCount(0);
+
+        // Combines base drink items and add-on items sold, then calculates the inventory used
+        String sql = 
+            "WITH All_Items_Sold AS ( " +
+            "    SELECT oli.menu_item_id, oli.quantity AS total_qty, o.order_timestamp " +
+            "    FROM Order_Line_Items oli " +
+            "    JOIN Orders o ON oli.order_id = o.order_id " +
+            "    UNION ALL " +
+            "    SELECT lia.add_on_menu_item_id AS menu_item_id, (oli.quantity * lia.quantity) AS total_qty, o.order_timestamp " +
+            "    FROM Line_Item_Add_Ons lia " +
+            "    JOIN Order_Line_Items oli ON lia.line_item_id = oli.line_item_id " +
+            "    JOIN Orders o ON oli.order_id = o.order_id " +
+            ") " +
+            "SELECT i.item_name, SUM(ais.total_qty * r.quantity_used) AS total_inventory_used " +
+            "FROM All_Items_Sold ais " +
+            "JOIN Recipes r ON ais.menu_item_id = r.menu_item_id " +
+            "JOIN Inventory i ON r.inventory_id = i.inventory_id " +
+            (startTimestamp != null ? "WHERE ais.order_timestamp >= ? " : "") +
+            "GROUP BY i.item_name " +
+            "ORDER BY total_inventory_used DESC";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn != null ? conn.prepareStatement(sql) : null) {
+
+            if (conn == null || pstmt == null) return;
+
+            if (startTimestamp != null) {
+                pstmt.setTimestamp(1, startTimestamp);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    productUsageModel.addRow(new Object[] {
+                            rs.getString("item_name"),
+                            String.format("%.2f", rs.getDouble("total_inventory_used")) // Formatted to 2 decimal places
+                    });
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            System.err.println("Failed to load product usage.");
+        }
+    }
+
+
     // Loads all employees into the employees table (for delete selection)
     private void loadEmployeesTable() {
         if (employeesModel == null) return;
@@ -516,6 +588,103 @@ public class ManagerDashboard extends JFrame {
                     this,
                     "Could not delete employee. They may be referenced by existing orders."
             );
+        }
+    }
+    
+    // NEW: Phase 4 Seasonal Menu Item Wizard
+    private void launchSeasonalWizard() {
+        JTextField drinkNameField = new JTextField(15);
+        JTextField drinkPriceField = new JTextField(10);
+        JTextField ingredientNameField = new JTextField(15);
+        JTextField initialStockField = new JTextField(10);
+
+        JPanel panel = new JPanel(new GridLayout(4, 2, 10, 10));
+        panel.add(new JLabel("Seasonal Drink Name:"));
+        panel.add(drinkNameField);
+        panel.add(new JLabel("Drink Price ($):"));
+        panel.add(drinkPriceField);
+        panel.add(new JLabel("New Ingredient Name:"));
+        panel.add(ingredientNameField);
+        panel.add(new JLabel("Initial Stock Quantity:"));
+        panel.add(initialStockField);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, 
+                 "Add New Seasonal Item & Inventory", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String drinkName = drinkNameField.getText().trim();
+            String ingredientName = ingredientNameField.getText().trim();
+            double drinkPrice;
+            double initialStock;
+
+            try {
+                drinkPrice = Double.parseDouble(drinkPriceField.getText().trim());
+                initialStock = Double.parseDouble(initialStockField.getText().trim());
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter valid numbers for Price and Stock.");
+                return;
+            }
+
+            if (drinkName.isEmpty() || ingredientName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Names cannot be empty.");
+                return;
+            }
+
+            // Execute the 3-step transaction
+            String insertInvSql = "INSERT INTO Inventory (item_name, quantity_in_stock, reorder_level) VALUES (?, ?, 50.0)";
+            String insertMenuSql = "INSERT INTO Menu_Items (item_name, base_price, item_type) VALUES (?, ?, 'Drink')";
+            String insertRecipeSql = "INSERT INTO Recipes (menu_item_id, inventory_id, quantity_used) VALUES (?, ?, 1.0)";
+
+            try (Connection conn = Database.getConnection()) {
+                if (conn == null) return;
+                
+                conn.setAutoCommit(false); // Start transaction
+
+                try (PreparedStatement invStmt = conn.prepareStatement(insertInvSql, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement menuStmt = conn.prepareStatement(insertMenuSql, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement recipeStmt = conn.prepareStatement(insertRecipeSql)) {
+
+                    // 1. Insert Inventory
+                    invStmt.setString(1, ingredientName);
+                    invStmt.setDouble(2, initialStock);
+                    invStmt.executeUpdate();
+                    
+                    int invId = -1;
+                    try (ResultSet rs = invStmt.getGeneratedKeys()) {
+                        if (rs.next()) invId = rs.getInt(1);
+                    }
+
+                    // 2. Insert Menu Item
+                    menuStmt.setString(1, drinkName);
+                    menuStmt.setDouble(2, drinkPrice);
+                    menuStmt.executeUpdate();
+
+                    int menuId = -1;
+                    try (ResultSet rs = menuStmt.getGeneratedKeys()) {
+                        if (rs.next()) menuId = rs.getInt(1);
+                    }
+
+                    // 3. Link them in Recipes
+                    recipeStmt.setInt(1, menuId);
+                    recipeStmt.setInt(2, invId);
+                    recipeStmt.executeUpdate();
+
+                    conn.commit();
+                    JOptionPane.showMessageDialog(this, "Success! Seasonal item '" + drinkName + "' and ingredient '" + ingredientName + "' added to POS.");
+                    
+                    // Refresh the Top Items / Product Usage charts just in case
+                    refreshAnalytics();
+
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Failed to add seasonal item. Ensure the names don't already exist in the database.");
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 

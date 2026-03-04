@@ -1,13 +1,13 @@
 package frontend;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class InventorySystem extends JFrame {
     private final int managerId;
@@ -152,11 +152,7 @@ public class InventorySystem extends JFrame {
         controls.add(updateSelectedButton);
 
         controls.add(Box.createVerticalStrut(10));
-
-        JButton refreshButton = new JButton("Refresh Table");
-        refreshButton.addActionListener(e -> loadInventory());
-        controls.add(refreshButton);
-
+        
         main.add(controls, BorderLayout.EAST);
 
         return main;
