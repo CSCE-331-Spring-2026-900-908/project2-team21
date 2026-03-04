@@ -638,7 +638,7 @@ public class ManagerDashboard extends JFrame {
 
             // Execute the 3-step transaction
             String insertInvSql = "INSERT INTO Inventory (item_name, quantity_in_stock, reorder_level) VALUES (?, ?, 50.0)";
-            String insertMenuSql = "INSERT INTO Menu_Items (item_name, base_price, item_type) VALUES (?, ?, 'Drink')";
+            String insertMenuSql = "INSERT INTO Menu_Items (item_name, base_price, item_type, is_seasonal) VALUES (?, ?, 'Drink', true)";
             String insertRecipeSql = "INSERT INTO Recipes (menu_item_id, inventory_id, quantity_used) VALUES (?, ?, 1.0)";
 
             try (Connection conn = Database.getConnection()) {

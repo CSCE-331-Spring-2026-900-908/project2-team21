@@ -116,27 +116,77 @@ public class CashierDashboard extends JFrame {
 
     // Loads drink menu items and renders them as buttons.
     private void loadDrinks() {
-        String sql = "SELECT item_name, base_price FROM Menu_Items WHERE item_type = 'Drink'";
+        // Clear existing buttons
+        menuPanel.removeAll();
+        
+        // Modified SQL to include is_seasonal flag - order seasonal items first
+        String sql = "SELECT item_name, base_price, COALESCE(is_seasonal, false) as is_seasonal " +
+                    "FROM Menu_Items WHERE item_type = 'Drink' " +
+                    "ORDER BY is_seasonal DESC, item_name ASC";
         
         try (Connection conn = Database.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
                 String itemName = rs.getString("item_name");
                 double price = rs.getDouble("base_price");
+                boolean isSeasonal = rs.getBoolean("is_seasonal");
 
-                JButton drinkButton = new JButton("<html><center>" + itemName + "<br>$" + String.format("%.2f", price) + "</center></html>");
+                JButton drinkButton = new JButton();
                 drinkButton.setPreferredSize(new Dimension(150, 100));
-                drinkButton.setBackground(new Color(173, 216, 230)); 
                 drinkButton.setFocusPainted(false);
                 
+                if (isSeasonal) {
+                    // 🌟 SEASONAL ITEM STYLING 🌟
+                    drinkButton.setBackground(new Color(255, 215, 0)); // Gold
+                    drinkButton.setForeground(new Color(139, 0, 0)); // Dark red text
+                    drinkButton.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(255, 140, 0), 3), // Orange border
+                        BorderFactory.createRaisedBevelBorder()
+                    ));
+                    
+                    // Add stars and seasonal emoji
+                    drinkButton.setText("<html><center>🌟 " + itemName + " 🌟<br><font color='#8B0000'>$" + 
+                                    String.format("%.2f", price) + " ⏳</font></center></html>");
+                    
+                    // Add tooltip
+                    drinkButton.setToolTipText("🌟 SEASONAL SPECIAL - Limited time only! 🌟");
+                    
+                } else {
+                    // REGULAR ITEM STYLING
+                    drinkButton.setBackground(new Color(173, 216, 230)); // Light blue
+                    drinkButton.setForeground(Color.BLACK);
+                    drinkButton.setBorder(BorderFactory.createRaisedBevelBorder());
+                    drinkButton.setText("<html><center>" + itemName + "<br>$" + 
+                                    String.format("%.2f", price) + "</center></html>");
+                }
+                
+                // Add action listener
                 drinkButton.addActionListener(e -> {
                     DrinkCustomization customizationPage = new DrinkCustomization(CashierDashboard.this, itemName, price);
                     customizationPage.setVisible(true);
                 });
 
                 menuPanel.add(drinkButton);
+            }
+            
+            // If no seasonal items were found, add a note
+            boolean hasSeasonal = false;
+            rs.beforeFirst(); // Reset cursor
+            while (rs.next()) {
+                if (rs.getBoolean("is_seasonal")) {
+                    hasSeasonal = true;
+                    break;
+                }
+            }
+            
+            if (!hasSeasonal) {
+                JLabel noSeasonal = new JLabel("No seasonal items currently available", SwingConstants.CENTER);
+                noSeasonal.setForeground(new Color(255, 140, 0));
+                noSeasonal.setFont(new Font("Arial", Font.ITALIC, 12));
+                noSeasonal.setPreferredSize(new Dimension(150, 50));
+                menuPanel.add(noSeasonal);
             }
             
             menuPanel.revalidate();
