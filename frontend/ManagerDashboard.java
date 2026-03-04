@@ -80,7 +80,7 @@ public class ManagerDashboard extends JFrame {
         JButton zReportButton = new JButton("Run Z-Report");
         zReportButton.setBackground(new Color(220, 53, 69)); // Red
         zReportButton.setForeground(Color.WHITE);
-        zReportButton.addActionListener(e -> generateZReport());
+        //zReportButton.addActionListener(e -> generateZReport());
 
         leftPanel.add(xReportButton);
         leftPanel.add(zReportButton);
@@ -606,5 +606,27 @@ public class ManagerDashboard extends JFrame {
         receipt.append("      END OF X-REPORT READOUT       \n");
 
         showReceiptDialog("X-Report", receipt.toString());
+    }
+    // A helper method to display the formatted text cleanly
+    private void showReceiptDialog(String title, String receiptText) {
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setLayout(new BorderLayout());
+        
+        JTextArea textArea = new JTextArea(receiptText);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        textArea.setEditable(false);
+        textArea.setMargin(new Insets(10, 10, 10, 10));
+        
+        dialog.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        
+        JButton closeBtn = new JButton("Close");
+        closeBtn.addActionListener(e -> dialog.dispose());
+        JPanel btnPanel = new JPanel();
+        btnPanel.add(closeBtn);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+        
+        dialog.setSize(400, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }
