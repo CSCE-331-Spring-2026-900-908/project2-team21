@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import javax.swing.*;
@@ -63,6 +64,24 @@ public class ManagerDashboard extends JFrame {
         menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
         leftPanel.add(menuPriceButton);
 
+        // NEW: Seasonal Menu Item Box
+        JPanel seasonalBox = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        seasonalBox.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(220, 83, 69), 2), // Thick red/orange border
+            "NEW SEASONAL MENU ITEM",
+            javax.swing.border.TitledBorder.CENTER,
+            javax.swing.border.TitledBorder.TOP,
+            new Font("Arial", Font.BOLD, 12),
+            new Color(220, 83, 69)
+        ));
+
+        JButton addSeasonalBtn = new JButton("+ Add Seasonal Item & Inventory");
+        addSeasonalBtn.setFont(new Font("Arial", Font.BOLD, 12));
+        addSeasonalBtn.addActionListener(e -> launchSeasonalWizard());
+        seasonalBox.add(addSeasonalBtn);
+
+        leftPanel.add(seasonalBox);
+
         rangeDropdown = new JComboBox<>(new String[] { "Last 7 Days", "Last 30 Days", "Last 365 Days", "All Time" });
         rangeDropdown.addActionListener(e -> refreshAnalytics());
 
@@ -110,7 +129,7 @@ public class ManagerDashboard extends JFrame {
 
         employeeSalesModel = new DefaultTableModel(new Object[] { "Employee", "Orders", "Revenue" }, 0);
         
-        // NEW: Initialize Product Usage table
+        // Initialize Product Usage table
         productUsageModel = new DefaultTableModel(new Object[] { "Inventory Item", "Total Quantity Used" }, 0);
         JTable productUsageTable = new JTable(productUsageModel);
 
