@@ -658,7 +658,58 @@ public class ManagerDashboard extends JFrame {
             ex.printStackTrace();
             return;
         }
+        String insertZReportSql =
+            "INSERT INTO Z_Reports (report_date, total_sales, manager_id) VALUES (CURRENT_DATE, ?, ?)";
+        String resetOrdersSql =
+            "UPDATE Orders SET is_closed = TRUE WHERE DATE(order_timestamp) = CURRENT_DATE AND is_closed = FALSE";
 
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertZReportSql);
+                PreparedStatement resetStmt = conn.prepareStatement(resetOrdersSql)) {
+
+                insertStmt.setDouble(1, daySales);
+                insertStmt.setInt(2, managerId);
+                insertStmt.executeUpdate();
+
+                resetStmt.executeUpdate();
+
+                conn.commit();
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to execute Z-Report transaction.");
+            return;
+        }
+
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("====================================\n");
+        receipt.append("             Z - REPORT             \n");
+        receipt.append("          END OF DAY CLOSE          \n");
+        receipt.append("====================================\n");
+        receipt.append("Date: ").append(java.time.LocalDate.now()).append("\n");
+        receipt.append("Time: ").append(java.time.LocalTime.now().withNano(0)).append("\n");
+        receipt.append("Manager ID: ").append(managerId).append("\n");
+        receipt.append("Manager Name: ").append(managerName).append("\n\n");
+        receipt.append("------------------------------------\n");
+        receipt.append(String.format("TOTAL DAY ORDERS: %d\n", dayOrders));
+        receipt.append(String.format("TOTAL DAY SALES:  $%.2f\n", daySales));
+        receipt.append("------------------------------------\n");
+        receipt.append("SYSTEM STATUS: \n");
+        receipt.append("- ACTIVE ORDERS RESET TO ZERO\n");
+        receipt.append("- Z-REPORT LOCKED FOR REMAINDER OF DAY\n\n");
+        receipt.append("Manager Signature:\n\n\n");
+        receipt.append("X___________________________________\n");
+        receipt.append("====================================\n");
+
+        showReceiptDialog("Z-Report", receipt.toString());
+        
     }
     // A helper method to display the formatted text cleanly
     private void showReceiptDialog(String title, String receiptText) {
