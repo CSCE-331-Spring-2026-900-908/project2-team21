@@ -66,7 +66,13 @@ public class ManagerDashboard extends JFrame {
         menuPriceButton.addActionListener(e -> openPriceMenuAdjustments());
         leftPanel.add(menuPriceButton);
 
-        // NEW: Seasonal Menu Item Box
+        // --- NEW: Recipe Management Button ---
+        JButton recipeButton = new JButton("Recipe Management");
+        recipeButton.addActionListener(e -> openRecipeManagement());
+        leftPanel.add(recipeButton);
+        // ---------------------------------------
+
+        // Seasonal Menu Item Box
         JPanel seasonalBox = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         seasonalBox.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(220, 83, 69), 2), // Thick red/orange border
@@ -414,7 +420,7 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
-    // NEW METHOD: Loads product inventory usage based on the selected time window
+    // Loads product inventory usage based on the selected time window
     private void loadProductUsage(Timestamp startTimestamp) {
         productUsageModel.setRowCount(0);
 
@@ -591,7 +597,7 @@ public class ManagerDashboard extends JFrame {
         }
     }
     
-    // NEW: Phase 4 Seasonal Menu Item Wizard
+    // Phase 4 Seasonal Menu Item Wizard
     private void launchSeasonalWizard() {
         JTextField drinkNameField = new JTextField(15);
         JTextField drinkPriceField = new JTextField(10);
@@ -688,6 +694,12 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
+    // Opens the Recipe Management pop-up window
+    private void openRecipeManagement() {
+        // Notice we DO NOT call dispose() here, so the dashboard stays open in the background!
+        new RecipeManagement(managerId, managerName).setVisible(true);
+    }
+
     // Inventory System view
     private void openInventorySystem() {
         dispose();
@@ -731,8 +743,8 @@ public class ManagerDashboard extends JFrame {
         int totalOrders = 0;
 
         try (Connection conn = Database.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-            ResultSet rs = pstmt.executeQuery()) {
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
 
             boolean hasData = false;
             while (rs.next()) {
@@ -776,14 +788,15 @@ public class ManagerDashboard extends JFrame {
 
         showReceiptDialog("X-Report", receipt.toString());
     }
-    //Z report looks at same things as x-report but at end of day and resets all values to 0 after for next day and next x report
+
+    // Z report looks at same things as x-report but at end of day and resets all values to 0 after for next day and next x report
     private void generateZReport() {
         
         String checkSql = "SELECT COUNT(*) FROM Z_Reports WHERE report_date = CURRENT_DATE";
         
         try (Connection conn = Database.getConnection();
-            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-            ResultSet checkRs = checkStmt.executeQuery()) {
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+             ResultSet checkRs = checkStmt.executeQuery()) {
             
             if (checkRs.next() && checkRs.getInt(1) > 0) {
                 JOptionPane.showMessageDialog(
@@ -816,8 +829,8 @@ public class ManagerDashboard extends JFrame {
         int dayOrders = 0;
 
         try (Connection conn = Database.getConnection();
-            PreparedStatement gatherStmt = conn.prepareStatement(gatherSql);
-            ResultSet gatherRs = gatherStmt.executeQuery()) {
+             PreparedStatement gatherStmt = conn.prepareStatement(gatherSql);
+             ResultSet gatherRs = gatherStmt.executeQuery()) {
             
             if (gatherRs.next()) {
                 dayOrders = gatherRs.getInt("total_orders");
@@ -836,7 +849,7 @@ public class ManagerDashboard extends JFrame {
             conn.setAutoCommit(false);
 
             try (PreparedStatement insertStmt = conn.prepareStatement(insertZReportSql);
-                PreparedStatement resetStmt = conn.prepareStatement(resetOrdersSql)) {
+                 PreparedStatement resetStmt = conn.prepareStatement(resetOrdersSql)) {
 
                 insertStmt.setDouble(1, daySales);
                 insertStmt.setInt(2, managerId);
