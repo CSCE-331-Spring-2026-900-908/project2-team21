@@ -638,7 +638,15 @@ public class ManagerDashboard extends JFrame {
                         if (rs.next()) invId = rs.getInt(1);
                     }
 
-                    
+                    // 2. Insert Menu Item
+                    menuStmt.setString(1, drinkName);
+                    menuStmt.setDouble(2, drinkPrice);
+                    menuStmt.executeUpdate();
+
+                    int menuId = -1;
+                    try (ResultSet rs = menuStmt.getGeneratedKeys()) {
+                        if (rs.next()) menuId = rs.getInt(1);
+                    }
 
                     // 3. Link them in Recipes
                     recipeStmt.setInt(1, menuId);
