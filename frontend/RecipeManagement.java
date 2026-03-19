@@ -9,6 +9,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+/**
+ * A dialog window for managers to view, add, update, or remove 
+ * ingredient mappings for specific menu items. Handles the many-to-many 
+ * relationships in the Recipes database table.
+ *
+ * @author Team 21
+ * @version 1.0
+ */
 public class RecipeManagement extends JFrame {
     private final int managerId;
     private final String managerName;
@@ -24,6 +32,13 @@ public class RecipeManagement extends JFrame {
     private HashMap<String, Integer> drinkMap = new HashMap<>();
     private HashMap<String, Integer> inventoryMap = new HashMap<>();
 
+    /**
+     * Constructs the RecipeManagement interface.
+     * Loads current menu items and inventory into dropdowns for easy mapping.
+     *
+     * @param managerId The unique database ID of the manager performing the action.
+     * @param managerName The name of the manager.
+     */
     public RecipeManagement(int managerId, String managerName) {
         this.managerId = managerId;
         this.managerName = managerName;

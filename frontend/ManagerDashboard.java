@@ -13,6 +13,14 @@ import java.time.LocalDateTime;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * The management interface providing administrative controls and analytics.
+ * Includes features for viewing sales reports, tracking product usage, 
+ * managing employees, generating X/Z reports, and adding new seasonal items.
+ *
+ * @author Team 21
+ * @version 1.0
+ */
 public class ManagerDashboard extends JFrame {
     private final int managerId;
     private final String managerName;
@@ -36,6 +44,13 @@ public class ManagerDashboard extends JFrame {
     private JButton addEmployeeButton;
     private JButton deleteEmployeeButton;
 
+    /**
+     * Constructs the ManagerDashboard for a specific logged-in manager.
+     * Initializes the tabbed analytics views, employee management, and populates initial data.
+     *
+     * @param managerId The unique database ID of the manager.
+     * @param managerName The name of the manager for display purposes.
+     */
     public ManagerDashboard(int managerId, String managerName) {
         this.managerId = managerId;
         this.managerName = managerName;

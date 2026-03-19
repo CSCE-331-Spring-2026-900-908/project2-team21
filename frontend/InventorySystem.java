@@ -9,6 +9,14 @@ import java.sql.SQLException;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * The graphical interface for managing the restaurant's physical inventory.
+ * Allows managers to view current stock, update quantities, set reorder levels,
+ * and add new inventory items (with the option to automatically create a linked menu item).
+ *
+ * @author Team 21
+ * @version 1.0
+ */
 public class InventorySystem extends JFrame {
     private final int managerId;
     private final String managerName;
@@ -28,6 +36,13 @@ public class InventorySystem extends JFrame {
     private JButton addButton;
     private JButton updateSelectedButton;
 
+    /**
+     * Constructs the InventorySystem dashboard.
+     * Initializes the data table, input forms, and navigation buttons.
+     *
+     * @param managerId The unique database ID of the manager.
+     * @param managerName The name of the manager for display purposes.
+     */
     public InventorySystem(int managerId, String managerName) {
         this.managerId = managerId;
         this.managerName = managerName;

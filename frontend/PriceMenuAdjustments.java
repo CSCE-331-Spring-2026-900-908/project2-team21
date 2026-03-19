@@ -9,6 +9,14 @@ import java.sql.SQLException;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * The administrative interface for managing menu items and pricing.
+ * Allows managers to view all available drinks and add-ons, adjust prices,
+ * add new menu items, and view individual item sales performance.
+ *
+ * @author Team 21
+ * @version 1.0
+ */
 public class PriceMenuAdjustments extends JFrame {
     private final int managerId;
     private final String managerName;
@@ -37,7 +45,13 @@ public class PriceMenuAdjustments extends JFrame {
     private JLabel avgPriceValue;
     private JLabel lastUpdatedValue;
 
-    // Builds the price and menu adjustment screen for a manager.
+    /**
+     * Constructs the PriceMenuAdjustments dashboard.
+     * Sets up the layout for menu editing, metric summaries, and item order history.
+     *
+     * @param managerId The unique database ID of the manager.
+     * @param managerName The name of the manager for display purposes.
+     */
     public PriceMenuAdjustments(int managerId, String managerName) {
         this.managerId = managerId;
         this.managerName = managerName;
