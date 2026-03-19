@@ -7,11 +7,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.swing.*;
 
+/**
+ * The graphical user interface for the login screen.
+ * Handles employee authentication by verifying the entered Employee ID 
+ * against the database and routing the user to the appropriate dashboard.
+ *
+ * @author Team 21
+ * @version 1.0
+ */
 public class LoginScreen extends JFrame {
     private JTextField empIdField;
     private JButton loginButton;
 
-    // Builds the login screen UI.
+    /**
+     * Constructs the LoginScreen, initializing the UI components, 
+     * setting up the layout, and attaching action listeners for authentication.
+     */
     public LoginScreen() {
         setTitle("Boba POS - Login");
         setSize(400, 300);
@@ -48,7 +59,6 @@ public class LoginScreen extends JFrame {
         empIdField.addActionListener(e -> attemptLogin());
     }
 
-    // Validates the employee ID and opens the correct dashboard.
     private void attemptLogin() {
         String empIdStr = empIdField.getText().trim();
         if (empIdStr.isEmpty()) {
