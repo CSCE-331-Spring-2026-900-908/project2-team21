@@ -72,3 +72,20 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
+// ---------- MVP API: show latest orders (demo evidence) ----------
+app.get("/api/orders/recent", async (_, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT order_id, order_timestamp, total_amount
+       FROM Orders
+       ORDER BY order_timestamp DESC
+       LIMIT 10`
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
