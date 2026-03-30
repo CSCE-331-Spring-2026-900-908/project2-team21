@@ -4,3 +4,8 @@ frontend/Credentials.class
 
 # # Ignore Java compiled files
 *.class
+
+# Ignore node modules
+node_modules/
+.env
+.DS_Store

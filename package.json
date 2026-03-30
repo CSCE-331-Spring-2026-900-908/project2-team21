@@ -1,0 +1,20 @@
+{
+  "name": "project2-team21",
+  "version": "1.0.0",
+  "description": "-----------------------------------------------------------------------------------------------------------------------\r HOW TO LINK CREDENTIALS:\r - under the frontend folder directory, create a file called Credentials.java\r - populate it with the following:",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
